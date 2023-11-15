@@ -7,17 +7,12 @@
 typedef double ftype;
 typedef std::complex<ftype> ctype;
 
-static const ftype _fmin=std::numeric_limits<ftype>::min();
-static const ftype _fmax=std::numeric_limits<ftype>::max();
-static const ftype _fprec=std::numeric_limits<ftype>::epsilon();
-//static const ftype _lfprec=std::numeric_limits<ftype>::min_exponent;
-static const ftype _lfprec=std::log(_fprec);
-
 template<class T>
 class cayley_hamilton {
 public:
-	cayley_hamilton(): n(0),a(0),pl(0),trpl(0),crpl(0),pal(0),tal(0),mmax(0) {
-		opf=[](ftype pref,ftype x) { return pref/x; };
+	cayley_hamilton(): n(0),a(0),pl(0),trpl(0),crpl(0),pal(0),al(0),mmax(0),nhl_max(0) {
+		opf=[](ftype pref,int i) { return pref/(ftype)i; }; // returns the i-th coeff. of the power seris, computed from the (i-1)-th coeff. "pref" and "i"
+													   // defaulte rule generates the coeffs. for the powerseries of exp(), i.e. 1/i!
 	}
 
 	cayley_hamilton(int tn) {
@@ -28,9 +23,10 @@ public:
 			trpl=new T[n+1]();
 			crpl=new T[n+1]();
 			pal=new T[n]();
-			tal=new T[n]();
-			opf=[](ftype pref,ftype x) { return pref/x; };
+			al=new T[n]();
+			opf=[](ftype pref,int i) { return pref/(ftype)i; };
 			mmax=100*n;
+			nhl_max=3;
 		} else {
 			n=0;
 			a=0;
@@ -38,9 +34,10 @@ public:
 			trpl=0;
 			crpl=0;
 			pal=new T[n]();
-			tal=new T[n]();
-			opf=[](ftype pref,ftype x) { return pref/x; };
+			al=new T[n]();
+			opf=[](ftype pref,int i) { return pref/(ftype)i; };
 			mmax=100;
+			nhl_max=3;
 		}
 	}
 
@@ -63,9 +60,9 @@ public:
 			delete[] pal;
 			pal=0;
 		}
-		if(tal!=0) {
-			delete[] tal;
-			tal=0;
+		if(al!=0) {
+			delete[] al;
+			al=0;
 		}
 		n=0;
 	}
@@ -97,11 +94,11 @@ public:
 					pal=0;
 				}
 				pal=new T[n];
-				if(tal!=0) {
-					delete[] tal;
-					tal=0;
+				if(al!=0) {
+					delete[] al;
+					al=0;
 				}
-				tal=new T[n];
+				al=new T[n];
 
 				mmax=100*n;
 			}
@@ -125,25 +122,25 @@ public:
 				delete[] pal;
 				pal=0;
 			}
-			if(tal!=0) {
-				delete[] tal;
-				tal=0;
+			if(al!=0) {
+				delete[] al;
+				al=0;
 			}
 			mmax=0;
 		}
 	}
 
-	void operator()(T** tain,T** taout) {
+	void operator()(T** ain,T** aout) {
 		int i,j,k;
 		// compute the 0-th to n-th matrix powers of ta[][]
 		// the i-th matrix powers of ta[][] is stored in pl[i][][]
 		// the trace of the i-th matrix power of ta[][] is stored in trpl[i]
 		set_to_identity(pl[0]);
 		trpl[0]=n;
-		matrix_copy(tain,pl[1]);
+		matrix_copy(ain,pl[1]);
 		get_trace(pl[1],trpl[1]);
 		for(i=2; i<=n; ++i) {
-			matrix_mult_nn(tain,pl[i-1],pl[i],trpl[i]);
+			matrix_mult_nn(ain,pl[i-1],pl[i],trpl[i]);
 		}
 
 		// compute the characteristic polynomial crpl[] from the traced powers trpl[]
@@ -156,47 +153,46 @@ public:
 			crpl[n-j]/=j;
 		}
 
-		// compute iteratively the n coefficients tal[] so that the Cayley-Hamilton result
-		// for the matrix power series is given by by: taout[][] = sum_i tal[i]*pl[i][][]
+		// compute iteratively the n coefficients al[] so that the Cayley-Hamilton result
+		// for the matrix power series is given by by: aout[][] = sum_i al[i]*pl[i][][]
 
-		//set initial values for the n entries in tal[]:
+		//set initial values for the n entries in al[]:
 		ftype wpf=1.0; //leading coefficient of power series 
 		for(i=0; i<n; ++i) {
 			pal[i]=0;
-			tal[i]=wpf;
-			wpf=opf(wpf,(ftype)(i+1)); //compute (i+1)-th power series coefficent from i-th coefficient
+			al[i]=wpf;
+			wpf=opf(wpf,i+1); //compute (i+1)-th power series coefficent from i-th coefficient, using the rule defined by opf
 		}
 		pal[n-1]=1.0;
 
 		T ch;
 		T cho;
 		T tch;
-		int nhl_max=3;
 		int nhl=nhl_max;
-		int has_chn=0;
+		int nch;
 
-		// iteratively add higher order power series terms to tal[] till tal[] doesn't change anymore: 
+		// iteratively add higher order power series terms to al[] till al[] doesn't change anymore: 
 		for(j=n; j<mmax; ++j) {
-			has_chn=1;
+			nch=0;
 			ch=-pal[n-1]*crpl[0];
 			cho=pal[0];
 			pal[0]=ch;
-			tch=tal[0];
-			tal[0]+=wpf*ch;
-			if(tch==tal[0]) {
-				has_chn=0;
+			tch=al[0];
+			al[0]+=wpf*ch;
+			if(tch==al[0]) {
+				++nch;
 			}
 			for(i=1; i<n; ++i) {
 				ch=cho-pal[n-1]*crpl[i];
 				cho=pal[i];
 				pal[i]=ch;
-				tch=tal[i];
-				tal[i]+=wpf*ch;
-				if(tch==tal[i]) {
-					has_chn=0;
+				tch=al[i];
+				al[i]+=wpf*ch;
+				if(tch==al[i]) {
+					++nch;
 				}
 			}
-			if(has_chn==0) {
+			if(nch>=n) {
 				--nhl;
 				if(nhl<=0) {
 					break;
@@ -205,15 +201,15 @@ public:
 				nhl=nhl_max;
 			}
 
-			wpf=opf(wpf,(ftype)(j+1));
+			wpf=opf(wpf,j+1);
 		}
 
-		// form the output matrix:
+		// sum the 0-th to (n-1)-th matrix powers pl[] with weights al[] to form the output matrix:
 		for(i=0; i<n; ++i) {
 			for(j=0; j<n; ++j) {
-				taout[i][j]=tal[0]*pl[0][i][j];
+				aout[i][j]=al[0]*pl[0][i][j];
 				for(k=1; k<n; ++k) {
-					taout[i][j]+=tal[k]*pl[k][i][j];
+					aout[i][j]+=al[k]*pl[k][i][j];
 				}
 			}
 		}
@@ -416,12 +412,13 @@ private:
 
 	int n;
 	int mmax;
+	int nhl_max;
 	T** a;
 	T*** pl;
 	T* trpl;
 	T* crpl;
 	T* pal;
-	T* tal;
-	ftype(*opf)(ftype,ftype);
+	T* al;
+	ftype(*opf)(ftype,int);
 };
 
