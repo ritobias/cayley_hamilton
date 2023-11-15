@@ -71,7 +71,9 @@ StyleCopReport.xml
 
 # Project files
 *.sln
-*.vcxproj*
+*.vcxproj
+*.vcxproj.user
+*.vcxproj.filters
 
 # Files built by Visual Studio
 *_i.c
