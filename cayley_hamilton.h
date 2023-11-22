@@ -146,7 +146,9 @@ public:
 		matrix_copy(ain,pl[1]);
 		get_trace(pl[1],trpl[1]);
 		for(i=2; i<=n; ++i) {
-			matrix_mult_nn(ain,pl[i-1],pl[i],trpl[i]);
+			j=i/2;
+			k=i%2;
+			matrix_mult_nn(pl[j],pl[j+k],pl[i],trpl[i]);
 		}
 
 		// compute the characteristic polynomial crpl[] from the traced powers trpl[]
@@ -730,52 +732,6 @@ public:
 		}
 	}
 
-	void log_ah(ctype** inmat,ftype* outvec) {
-		int i;
-		for(i=0; i<ngen; ++i) {
-			outvec[i]=0;
-		}
-		ctype nfc=ctype(0.0,0.5);
-		ftype tiv;
-		ctype ttiv;
-		int maxit=5*n;
-		int hch;
-		ch.matrix_copy(inmat,tmat);
-		int it;
-		for(it=0; it<maxit; ++it) {
-			hch=0;
-			for(int igen=0; igen<ngen; ++igen) {
-				tgen=generator+igen;
-				telem0=tgen->elem;
-				tiv=0;
-				for(i=0; i<tgen->nelem; ++i) {
-					telem=telem0+i;
-					tiv+=std::imag(telem->val*tmat[telem->ind2][telem->ind1]);
-				}
-				outvec[igen]+=tiv;
-				if(std::abs(tiv)>1000.0*_fprec*std::abs(outvec[igen])) {
-					hch=1;
-				}
-			}
-			if(hch==0) {
-				break;
-			}
-			ch.set_to_zero(tmat);
-			for(int igen=0; igen<ngen; ++igen) {
-				tgen=generator+igen;
-				telem0=tgen->elem;
-				ttiv=-nfc*outvec[igen];
-				for(i=0; i<tgen->nelem; ++i) {
-					telem=telem0+i;
-					tmat[telem->ind1][telem->ind2]+=ttiv*telem->val;
-				}
-			}
-			ch(tmat,tmat2);
-			ch.matrix_mult_nn(inmat,tmat2,tmat);
-		}
-		std::cout<<"iterations: "<<it<<std::endl;
-	}
-
 	void proj_h(ctype** inmat,ftype* outvec) {
 		int i;
 		ftype tiv;
@@ -815,6 +771,53 @@ public:
 			}
 		}
 	}
+
+	void log_ah(ctype** inmat,ftype* outvec) {
+		int i;
+		for(i=0; i<ngen; ++i) {
+			outvec[i]=0;
+		}
+		ctype nfc=ctype(0.0,0.5);
+		ftype tiv;
+		ctype ttiv;
+		int maxit=5*n;
+		ch.matrix_copy(inmat,tmat);
+		int it;
+		ftype outvsq=0;
+		ftype tivsq;
+		for(it=0; it<maxit; ++it) {
+			tivsq=0;
+			for(int igen=0; igen<ngen; ++igen) {
+				tgen=generator+igen;
+				telem0=tgen->elem;
+				tiv=0;
+				for(i=0; i<tgen->nelem; ++i) {
+					telem=telem0+i;
+					tiv+=std::imag(telem->val*tmat[telem->ind2][telem->ind1]);
+				}
+				outvec[igen]+=tiv;
+				tivsq+=tiv*tiv;
+			}
+			outvsq+=tivsq;
+			if(tivsq<10000.0*_fprec*outvsq) {
+				break;
+			}
+			ch.set_to_zero(tmat);
+			for(int igen=0; igen<ngen; ++igen) {
+				tgen=generator+igen;
+				telem0=tgen->elem;
+				ttiv=-nfc*outvec[igen];
+				for(i=0; i<tgen->nelem; ++i) {
+					telem=telem0+i;
+					tmat[telem->ind1][telem->ind2]+=ttiv*telem->val;
+				}
+			}
+			ch(tmat,tmat2); //matrix exponential
+			ch.matrix_mult_nn(inmat,tmat2,tmat);
+		}
+		std::cout<<"iterations: "<<it<<std::endl;
+	}
+
 
 	int n;
 	int ngen;
