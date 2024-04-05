@@ -75,40 +75,45 @@ public:
 		//this function has to be run afterwards to initialize the instance properly
 		if(tn>0) {
 			if(tn!=n) {
-				n=tn;
 				if(a!=0) {
 					delete_matrix(a);
 				}
+				if(trpl!=0) {
+					delete[] trpl;
+					trpl=0;
+				}
+				if(crpl!=0) {
+					delete[] crpl;
+					crpl=0;
+				}
+				if(pal!=0) {
+					delete[] pal;
+					pal=0;
+				}
+				if(al!=0) {
+					delete[] al;
+					al=0;
+				}
+
+				n=tn;
+
 				new_matrix(a);
 				if(pl!=0) {
 					delete_matrix_array(pl,n+1);
 				}
 				new_matrix_array(pl,n+1);
-				if(trpl!=0) {
-					delete[] trpl;
-					trpl=0;
-				}
+
 				trpl=new T[n+1];
-				if(crpl!=0) {
-					delete[] crpl;
-					crpl=0;
-				}
+
 				crpl=new T[n+1];
-				if(pal!=0) {
-					delete[] pal;
-					pal=0;
-				}
+
 				pal=new T[n];
-				if(al!=0) {
-					delete[] al;
-					al=0;
-				}
+
 				al=new T[n];
 
 				mmax=100*n;
 			}
 		} else {
-			n=0;
 			if(a!=0) {
 				delete_matrix(a);
 			}
@@ -132,6 +137,8 @@ public:
 				al=0;
 			}
 			mmax=0;
+
+			n=0;
 		}
 	}
 
