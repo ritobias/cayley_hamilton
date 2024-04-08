@@ -11,99 +11,6 @@ typedef std::complex<ftype> ctype;
 static const ftype _fprec=std::numeric_limits<ftype>::epsilon();
 
 template<class T>
-class sa_entry {
-public:
-	sa_entry():ind1(0),ind2(0),val(0) {
-
-	}
-	sa_entry(int ti1,int ti2,T tval): ind1(ti1),ind2(ti2),val(tval) {
-
-	}
-	void set(int ti1,int ti2,T tval) {
-		ind1=ti1;
-		ind2=ti2;
-		val=tval;
-	}
-	void clear() {
-		ind1=0;
-		ind2=0;
-		val=0;
-	}
-	~sa_entry() {
-
-	}
-	int ind1;
-	int ind2;
-	T val;
-};
-
-template<class T>
-class sparse_mat {
-public:
-	sparse_mat():n(0),nelem(0),elem(0) {
-
-	}
-	sparse_mat(int tn): n(tn) {
-		elem=new sa_entry<T>[n];
-		nelem=0;
-	}
-	void init(int tn) {
-		if(elem!=0) {
-			delete[] elem;
-			elem=0;
-		}
-
-		if(tn>0) {
-			n=tn;
-			elem=new sa_entry<T>[n];
-		}
-		nelem=0;
-	}
-	void push(int ti1,int ti2,T tval) {
-		elem[nelem].set(ti1,ti2,tval);
-		++nelem;
-	}
-	void pop() {
-		if(nelem>0) {
-			elem[nelem-1].clear();
-			--nelem;
-		}
-	}
-	~sparse_mat() {
-		delete[] elem;
-		nelem=0;
-	}
-	void print() {
-		T** tmat=new T*[n];
-		for(int i=0; i<n; ++i) {
-			tmat[i]=new T[n]();
-		}
-		for(int i=0; i<nelem; ++i) {
-			tmat[elem[i].ind1][elem[i].ind2]=elem[i].val;
-		}
-		std::cout<<std::endl;
-		for(int i=0; i<n; ++i) {
-			for(int j=0; j<n; ++j) {
-				std::cout<<tmat[i][j]<<" ";
-			}
-			std::cout<<std::endl;
-		}
-		std::cout<<std::endl;
-
-		for(int i=0; i<n; ++i) {
-			delete[] tmat[i];
-		}
-		delete[] tmat;
-	}
-	int nelem;
-	sa_entry<T>* elem;
-private:
-	int n;
-};
-
-
-
-template<class T>
 class cayley_hamilton {
 public:
 	cayley_hamilton(): n(0),a(0),pl(0),trpl(0),crpl(0),dpl(0),dtrpl(0),dcrpl(0),pal(0),dpal(0),al(0),dal(0),mmax(0),nhl_max(0),tmat(0) {
@@ -848,7 +755,6 @@ public:
 	}
 
 
-
 	// matrix operations:
 
 	void set_to_zero(T** ta) {
@@ -1483,6 +1389,97 @@ private:
 	ftype(*opf)(ftype,int);
 };
 
+
+template<class T>
+class sa_entry {
+public:
+	sa_entry():ind1(0),ind2(0),val(0) {
+
+	}
+	sa_entry(int ti1,int ti2,T tval): ind1(ti1),ind2(ti2),val(tval) {
+
+	}
+	void set(int ti1,int ti2,T tval) {
+		ind1=ti1;
+		ind2=ti2;
+		val=tval;
+	}
+	void clear() {
+		ind1=0;
+		ind2=0;
+		val=0;
+	}
+	~sa_entry() {
+
+	}
+	int ind1;
+	int ind2;
+	T val;
+};
+
+template<class T>
+class sparse_mat {
+public:
+	sparse_mat():n(0),nelem(0),elem(0) {
+
+	}
+	sparse_mat(int tn): n(tn) {
+		elem=new sa_entry<T>[n];
+		nelem=0;
+	}
+	void init(int tn) {
+		if(elem!=0) {
+			delete[] elem;
+			elem=0;
+		}
+
+		if(tn>0) {
+			n=tn;
+			elem=new sa_entry<T>[n];
+		}
+		nelem=0;
+	}
+	void push(int ti1,int ti2,T tval) {
+		elem[nelem].set(ti1,ti2,tval);
+		++nelem;
+	}
+	void pop() {
+		if(nelem>0) {
+			elem[nelem-1].clear();
+			--nelem;
+		}
+	}
+	~sparse_mat() {
+		delete[] elem;
+		nelem=0;
+	}
+	void print() {
+		T** tmat=new T*[n];
+		for(int i=0; i<n; ++i) {
+			tmat[i]=new T[n]();
+		}
+		for(int i=0; i<nelem; ++i) {
+			tmat[elem[i].ind1][elem[i].ind2]=elem[i].val;
+		}
+		std::cout<<std::endl;
+		for(int i=0; i<n; ++i) {
+			for(int j=0; j<n; ++j) {
+				std::cout<<tmat[i][j]<<" ";
+			}
+			std::cout<<std::endl;
+		}
+		std::cout<<std::endl;
+
+		for(int i=0; i<n; ++i) {
+			delete[] tmat[i];
+		}
+		delete[] tmat;
+	}
+	int nelem;
+	sa_entry<T>* elem;
+private:
+	int n;
+};
 
 class sun_algebra {
 public:
