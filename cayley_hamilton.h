@@ -1,9 +1,9 @@
 #pragma once
 #include<iostream>
-#include <algorithm>
-#include <complex>
-#include <limits>
-#include <cmath>
+#include<algorithm>
+#include<complex>
+#include<limits>
+#include<cmath>
 
 typedef double ftype;
 typedef std::complex<ftype> ctype;
