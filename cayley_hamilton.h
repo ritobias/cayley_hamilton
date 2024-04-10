@@ -486,20 +486,19 @@ public:
 		// next we iteratively add higher order power series terms to al[] and dal[] till al[] stops changing
 		// more precisely: the iteration will terminate after nhl_max consecutive iterations have not changed al[]	
 		T ch,cho,tch; // temporary variables for iteratin
-		T dch,dcho; // temporary variables for iteratin
 		int nhl=0; // counts the number of consecutive non-changing iterations  
 		int nch; // counts the number of unchanged al[] coefficients in the curret iteration 
 		for(j=n; j<mmax; ++j) {
 			// first update the derivative terms, since they depen on the current value of pal[n-1]:
-			dch=-tdpal[n-1]*crpl[0]-pal[n-1]*tdcrpl[0];
-			dcho=tdpal[0];
-			tdpal[0]=dch;
-			tdal[0]+=wpf*dch;
+			ch=-tdpal[n-1]*crpl[0]-pal[n-1]*tdcrpl[0];
+			cho=tdpal[0];
+			tdpal[0]=ch;
+			tdal[0]+=wpf*ch;
 			for(i=1; i<n; ++i) {
-				dch=dcho-tdpal[n-1]*crpl[i]-pal[n-1]*tdcrpl[i];
-				dcho=tdpal[i];
-				tdpal[i]=dch;
-				tdal[i]+=wpf*dch;
+				ch=cho-tdpal[n-1]*crpl[i]-pal[n-1]*tdcrpl[i];
+				cho=tdpal[i];
+				tdpal[i]=ch;
+				tdal[i]+=wpf*ch;
 			}
 
 			// now update the normal power series terms:
@@ -666,8 +665,7 @@ public:
 
 		// next we iteratively add higher order power series terms to al[] and the dal[][] till al[] stops changing
 		// more precisely: the iteration will terminate after nhl_max consecutive iterations have not changed al[]	
-		T ch,cho,tch; // temporary variables for iteration (for polynomial ceoffitients)
-		T dch,dcho; // temporary variables for iteration (for derivatives)
+		T ch,cho,tch; // temporary variables for iteration
 		int nhl=0; // counts the number of consecutive non-changing iterations  
 		int nch; // counts the number of unchanged al[] coefficients in the curret iteration 
 		for(j=n; j<mmax; ++j) {
@@ -677,15 +675,15 @@ public:
 				tdcrpl=dcrpl[idrv];
 				tdpal=dpal[idrv];
 				tdal=dal[idrv];
-				dch=-tdpal[n-1]*crpl[0]-pal[n-1]*tdcrpl[0];
-				dcho=tdpal[0];
-				tdpal[0]=dch;
-				tdal[0]+=wpf*dch;
+				ch=-tdpal[n-1]*crpl[0]-pal[n-1]*tdcrpl[0];
+				cho=tdpal[0];
+				tdpal[0]=ch;
+				tdal[0]+=wpf*ch;
 				for(i=1; i<n; ++i) {
-					dch=dcho-tdpal[n-1]*crpl[i]-pal[n-1]*tdcrpl[i];
-					dcho=tdpal[i];
-					tdpal[i]=dch;
-					tdal[i]+=wpf*dch;
+					ch=cho-tdpal[n-1]*crpl[i]-pal[n-1]*tdcrpl[i];
+					cho=tdpal[i];
+					tdpal[i]=ch;
+					tdal[i]+=wpf*ch;
 				}
 			}
 
@@ -1699,12 +1697,14 @@ public:
 		ftype tiv;
 		ctype ttiv;
 		int maxit=5*n;
+		ftype tfprec=10.0*_fprec*(ftype)n*n;
 		ch.matrix_copy(inmat,tmat);
 		int it;
-		ftype outvsq=0;
-		ftype tivsq;
+		ftype outvn=0;
+		ftype tivn;
 		for(it=0; it<maxit; ++it) {
-			tivsq=0;
+			outvn=0;
+			tivn=0;
 			for(int igen=0; igen<ngen; ++igen) {
 				tgen=generator+igen;
 				telem0=tgen->elem;
@@ -1714,10 +1714,10 @@ public:
 					tiv+=std::imag(telem->val*tmat[telem->ind2][telem->ind1]);
 				}
 				outvec[igen]+=tiv;
-				tivsq+=tiv*tiv;
+				outvn+=std::abs(outvec[igen]);
+				tivn+=std::abs(tiv);
 			}
-			outvsq+=tivsq;
-			if(tivsq<10000.0*_fprec*outvsq) {
+			if(tivn<tfprec*outvn) {
 				break;
 			}
 			ch.set_to_zero(tmat);
@@ -1733,7 +1733,7 @@ public:
 			ch(tmat,tmat2); //matrix exponential
 			ch.matrix_mult_nn(inmat,tmat2,tmat);
 		}
-		std::cout<<"iterations: "<<it<<std::endl;
+		std::cout<<"iterations: "<<it<<" , outvn: "<<outvn<< "("<<outvn*tfprec<<") , tivn: "<<tivn<<" , _fprec: "<<_fprec<<std::endl;
 	}
 
 
