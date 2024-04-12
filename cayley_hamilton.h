@@ -6,15 +6,46 @@
 #include<cmath>
 
 typedef double ftype;
+typedef long double lftype;
+
 typedef std::complex<ftype> ctype;
+typedef std::complex<lftype> lctype;
+
+namespace type_helper {
+	template<typename T>
+	struct val_type {
+		using type=T;
+	};
+
+	template<typename T>
+	struct val_type<std::complex<T>> {
+		using type=typename std::complex<T>::value_type;
+	};
+
+
+	template<typename T>
+	struct long_type { typedef T type; };
+
+	template<>
+	struct long_type<ftype> { typedef lftype type; };
+
+	template<>
+	struct long_type<ctype> { typedef lctype type; };
+}
 
 static const ftype _fprec=std::numeric_limits<ftype>::epsilon();
 
 template<class T>
 class cayley_hamilton {
+	// template class providing an implementation of the iterative Cayley-Hamilton method for computing
+	// matrix power series (cf. arXiv:2404.07704).
+
 public:
-	cayley_hamilton(): n(0),a(0),pl(0),trpl(0),crpl(0),dpl(0),dtrpl(0),dcrpl(0),pal(0),dpal(0),al(0),dal(0),mmax(0),nhl_max(0),tmat(0) {
-		opf=[](ftype pref,int i) { return pref/(ftype)i; }; // returns the i-th coeff. of the power seris, computed from the (i-1)-th coeff. "pref" and "i"
+	using fT=typename type_helper::val_type<T>::type; // determines fT if T is std::complex<fT>, and sets fT=T otherwise
+	//using lT=typename type_helper::long_type<T>::type; // type corresponding to T but longer bit representation 
+
+	cayley_hamilton(): n(0),a(0),pl(0),trpl(0),crpl(0),dpl(0),dtrpl(0),dcrpl(0),pal(0),dpal(0),al(0),dal(0),mmax(0),nhl_max(0),tmat(0),wps(0) {
+		opf=[](fT pref,int i) { return pref/(fT)i; }; // returns the i-th coeff. of the power seris, computed from the (i-1)-th coeff. "pref" and "i"
 													        // default rule generates the coeffs. for the powerseries of exp(), i.e. 1/i!
 	}
 
@@ -48,7 +79,8 @@ public:
 			for(int i=0; i<n*n; ++i) {
 				dal[i]=new T[n]();
 			}
-			opf=[](ftype pref,int i) { return pref/(ftype)i; };
+			wps=new fT[n]();
+			opf=[](fT pref,int i) { return pref/(fT)i; };
 			mmax=100*n;
 			nhl_max=3;
 		} else {
@@ -65,7 +97,8 @@ public:
 			dpal=0;
 			al=0;
 			dal=0;
-			opf=[](ftype pref,int i) { return pref/(ftype)i; };
+			wps=0;
+			opf=[](fT pref,int i) { return pref/(fT)i; };
 			mmax=100;
 			nhl_max=3;
 		}
@@ -131,6 +164,10 @@ public:
 			}
 			delete[] dal;
 			dal=0;
+		}
+		if(wps!=0) {
+			delete[] wps;
+			wps=0;
 		}
 		n=0;
 	}
@@ -200,6 +237,10 @@ public:
 					delete[] dal;
 					dal=0;
 				}
+				if(wps!=0) {
+					delete[] wps;
+					wps=0;
+				}
 
 				n=tn;
 
@@ -241,6 +282,8 @@ public:
 				for(int i=0; i<n*n; ++i) {
 					dal[i]=new T[n+1]();
 				}
+				
+				wps=new fT[n]();
 
 				mmax=100*n;
 			}
@@ -305,23 +348,40 @@ public:
 				delete[] dal;
 				dal=0;
 			}
+			if(wps!=0) {
+				delete[] wps;
+				wps=0;
+			}
 			mmax=0;
 
 			n=0;
 		}
 	}
 
-	void operator()(T** ain,T** aout) {
+	void operator()(T** ain,T** aout,int rescale=0) {
 		// applies the power series defined by opf() to the matrix ain[][], using the Cayley-Hamilton recursion, 
 		// and writes the result to aout[][]
+		// if rescale is set to 1, then the computation will be performed with rescaled input matrix, which is
+		// useful for matrices of large norm; if rescale isset to 0, no matrix rescaling will be performed. 
 
 		int i,j,k;
+		fT sfac=1.0; //scaling factor
 		// compute the 0-th to n-th matrix powers of ta[][] :
 		//   the i-th matrix power of ta[][] is stored in pl[i][][]
 		//   the trace of the i-th matrix power of ta[][] is stored in trpl[i]
 		set_to_identity(pl[0]);
 		trpl[0]=n;
-		matrix_copy(ain,pl[1]);
+		if(rescale==1) {
+			// if matrix rescaling is used, set sfac to be the magnitude of the largest element of ain[][]
+			// and initiate the computation of the matrix powers from ain[][]/sfac instead of ain[][]:
+			// (note that since we compute also the matrix powers pl[] from the rescaled matrix,
+			// the Cayley-Hamilton coefficient a_{k,j}, with k=0,1,...,\infty; j=0,...,n-1 
+			// will need to be rescaled only by a factor  sfac^{k}, instead of sfac^{k-j})
+			sfac=max_matrix_el(ain);
+			matrix_copy_scaled(ain,1.0/sfac,pl[1]);
+		} else {
+			matrix_copy(ain,pl[1]);
+		}
 		get_trace(pl[1],trpl[1]);
 		for(i=2; i<=n; ++i) {
 			j=i/2;
@@ -343,11 +403,15 @@ public:
 		// for the matrix power series is given by aout[][] = sum_i{al[i]*pl[i][][]} :
 
 		// set initial values for the n entries in al[] and pal[] :
-		ftype wpf=1.0; //leading coefficient of power series 
+		fT wpf=1.0; //leading coefficient of power series
 		for(i=0; i<n; ++i) {
 			pal[i]=0;
 			al[i]=wpf;
 			wpf=opf(wpf,i+1); //compute (i+1)-th power series coefficent from the i-th coefficient, using the rule defined by opf()
+			if(rescale==1) {
+				//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
+				wpf*=sfac;
+			}
 		}
 		pal[n-1]=1.0;
 
@@ -389,6 +453,12 @@ public:
 			}
 
 			wpf=opf(wpf,j+1); //compute (i+1)-th power series coefficent from i-th coefficient, using the rule defined by opf()
+
+			if(rescale==1) {
+				//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
+				wpf*=sfac;
+			}
+
 		}
 
 		// form output matrix by summing the 0-th to (n-1)-th matrix powers pl[] with corresponding weights al[] 
@@ -402,18 +472,29 @@ public:
 		}
 	}
 
-	void operator()(T** ain,T** dain,T** aout,T** daout) {
+	void operator()(T** ain,T** dain,T** aout,T** daout,int rescale=0) {
 		// applies the power series defined by opf() to the matrix ain[][], using the Cayley-Hamilton recursion, 
 		// and writes the result to aout[][]; computes also the derivative of aout[][] with respect to ain[][] in
 		// the direction of dain[][] and write the result to daout[][].
 
 		int i,j,k;
+		fT sfac=1.0; //scaling factor
 		// compute the 0-th to n-th matrix powers of ta[][] :
 		//   the i-th matrix power of ta[][] is stored in pl[i][][]
 		//   the trace of the i-th matrix power of ta[][] is stored in trpl[i]
 		set_to_identity(pl[0]);
 		trpl[0]=n;
-		matrix_copy(ain,pl[1]);
+		if(rescale==1) {
+			// if matrix rescaling is used, set sfac to be the magnitude of the largest element of ain[][]
+			// and initiate the computation of the matrix powers from ain[][]/sfac instead of ain[][]:
+			// (note that since we compute also the matrix powers pl[] from the rescaled matrix,
+			// the Cayley-Hamilton coefficient a_{k,j}, with k=0,1,...,\infty; j=0,...,n-1 
+			// will need to be rescaled only by a factor  sfac^{k}, instead of sfac^{k-j})
+			sfac=max_matrix_el(ain);
+			matrix_copy_scaled(ain,1.0/sfac,pl[1]);
+		} else {
+			matrix_copy(ain,pl[1]);
+		}
 		get_trace(pl[1],trpl[1]);
 		for(i=2; i<=n; ++i) {
 			j=i/2;
@@ -438,7 +519,13 @@ public:
 		// compute the derivatives dpl[i][][] of the matrix powers pl[i][][] and corresponding traces dtrpl[i][][]
 		set_to_zero(tdpl[0]);
 		tdtrpl[0]=0;
-		matrix_copy(dain,tdpl[1]);
+		if(rescale==1) {
+			//if we want to use wps factors from power siers also for the differentials,
+			//therefore need to rescale the differential basis as well:
+			matrix_copy_scaled(dain,1.0/sfac,tdpl[1]);
+		} else {
+			matrix_copy(dain,tdpl[1]);
+		}
 		get_trace(tdpl[1],tdtrpl[1]);
 		if(n>=2) {
 			matrix_mult_nn(pl[1],tdpl[1],tdpl[2]);  // dP_{2}=U.dP_{1}
@@ -472,7 +559,7 @@ public:
 		T* tdal=dal[0];
 
 		// set initial values for the n entries in al[] and pal[], as well as dal[] and dpal[] :
-		ftype wpf=1.0; //leading coefficient of power series 
+		fT wpf=1.0; //leading coefficient of power series 
 		for(i=0; i<n; ++i) {
 			pal[i]=0;
 			al[i]=wpf;
@@ -480,6 +567,10 @@ public:
 			tdpal[i]=0;
 			tdal[i]=0;
 			wpf=opf(wpf,i+1); //compute (i+1)-th power series coefficent from the i-th coefficient, using the rule defined by opf()
+			if(rescale==1) {
+				//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
+				wpf*=sfac;
+			}
 		}
 		pal[n-1]=1.0;
 
@@ -535,6 +626,10 @@ public:
 			}
 
 			wpf=opf(wpf,j+1); //compute (i+1)-th power series coefficent from i-th coefficient, using the rule defined by opf()
+			if(rescale==1) {
+				//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
+				wpf*=sfac;
+			}
 		}
 
 		// form output matrices
@@ -558,7 +653,7 @@ public:
 
 	}
 
-	void operator()(T** ain,T** aout,T**** daout) {
+	void operator()(T** ain,T** aout,T**** daout,int rescale=0) {
 		// applies the power series defined by opf() to the matrix ain[][], using the Cayley-Hamilton recursion, 
 		// and writes the result to aout[][]; computes also the derivative of aout[][] with respect to each of 
 		// the nxn components of ain[][] and write the result to daout[][][][] (the first two indices define the component
@@ -566,12 +661,20 @@ public:
 		// valued derivative).
 
 		int i,j,k;
+		fT sfac=1.0; //scaling factor
 		// compute the 0-th to n-th matrix powers of ta[][] :
 		//   the i-th matrix power of ta[][] is stored in pl[i][][]
 		//   the trace of the i-th matrix power of ta[][] is stored in trpl[i]
 		set_to_identity(pl[0]);
 		trpl[0]=n;
-		matrix_copy(ain,pl[1]);
+		if(rescale==1) {
+			// if matrix rescaling is used, set sfac to be the magnitude of the largest element of ain[][]
+			// and initiate the computation of the matrix powers from ain[][]/sfac instead of ain[][]:
+			sfac=max_matrix_el(ain);
+			matrix_copy_scaled(ain,1.0/sfac,pl[1]);
+		} else {
+			matrix_copy(ain,pl[1]);
+		}
 		get_trace(pl[1],trpl[1]);
 		for(i=2; i<=n; ++i) {
 			j=i/2;
@@ -604,11 +707,22 @@ public:
 				set_to_zero(tdpl[0]);
 				tdtrpl[0]=0;
 				set_to_zero(tdpl[1]);
-				tdpl[1][ic1][ic2]=1.0;
-				if(ic1==ic2) {
-					tdtrpl[1]=1.0;
+				if(rescale==1) {
+					//if we want to use wps factors from power siers also for the differentials,
+					//therefore need to rescale the differential basis as well:
+					tdpl[1][ic1][ic2]=1.0/sfac;
+					if(ic1==ic2) {
+						tdtrpl[1]=1.0/sfac;
+					} else {
+						tdtrpl[1]=0;
+					}
 				} else {
-					tdtrpl[1]=0;
+					tdpl[1][ic1][ic2]=1.0;
+					if(ic1==ic2) {
+						tdtrpl[1]=1.0;
+					} else {
+						tdtrpl[1]=0;
+					}
 				}
 				if(n>=2) {
 					matrix_mult_nn(pl[1],tdpl[1],tdpl[2]);  // dP_{2}=U.dP_{1}
@@ -642,11 +756,15 @@ public:
 		// and its derivative by daout[][] = sum_i{dal[i]*pl[i][][]+al[i]*dpl[i][][]}:
 
 		// set initial values for the n entries in al[] and pal[] :
-		ftype wpf=1.0; //leading coefficient of power series 
+		fT wpf=1.0; //leading coefficient of power series 
 		for(i=0; i<n; ++i) {
 			pal[i]=0;
 			al[i]=wpf;
 			wpf=opf(wpf,i+1); //compute (i+1)-th power series coefficent from the i-th coefficient, using the rule defined by opf()
+			if(rescale==1) {
+				//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
+				wpf*=sfac;
+			}
 		}
 		pal[n-1]=1.0;
 
@@ -721,6 +839,10 @@ public:
 			}
 
 			wpf=opf(wpf,j+1); //compute (i+1)-th power series coefficent from i-th coefficient, using the rule defined by opf()
+			if(rescale==1) {
+				//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
+				wpf*=sfac;
+			}
 		}
 
 		// form output matrices
@@ -753,7 +875,7 @@ public:
 	}
 
 
-	// matrix operations:
+	// matrix operation utility functions:
 
 	void set_to_zero(T** ta) {
 		// set ta[][] to the zero matrix
@@ -780,6 +902,24 @@ public:
 		}
 	}
 
+	fT max_matrix_el(T** lin1) {
+		// find and return the component of lin1[][] of largest magnitutde
+		int ic1,ic2;
+		T* lin10;
+		fT tres;
+		fT res=0;
+		for(ic1=0; ic1<n; ++ic1) {
+			lin10=lin1[ic1];
+			for(ic2=0; ic2<n; ++ic2) {
+				tres=std::abs(lin10[ic2]);
+				if(tres>res) {
+					res=tres;
+				}
+			}
+		}
+		return res;
+	}
+
 	void matrix_copy(T** lin1,T** lout) {
 		// set lout[][]=lin1[][]
 		int ic1,ic2;
@@ -794,7 +934,8 @@ public:
 		}
 	}
 
-	void matrix_copy_scaled(T** lin1,const T& scalef,T** lout) {
+	template<typename sT>
+	void matrix_copy_scaled(T** lin1,const sT& scalef,T** lout) {
 		// set lout[][]=scalef*lin1[][]
 		int ic1,ic2;
 		T* lin10;
@@ -820,7 +961,8 @@ public:
 		}
 	}
 
-	void matrix_copy_a_scaled(T** lin1,const T& scalef,T** lout) {
+	template<typename sT>
+	void matrix_copy_a_scaled(T** lin1,const sT& scalef,T** lout) {
 		// set lout[][]=scalef*conjugate_transpose(lin1[][])
 		int ic1,ic2;
 		T* lin10;
@@ -892,7 +1034,8 @@ public:
 		}
 	}
 
-	void matrix_add_scaled(T** lin1, const T& scalef,T** lout) {
+	template<typename sT>
+	void matrix_add_scaled(T** lin1, const sT& scalef,T** lout) {
 		// add scalef*lin1[][] to lout[][]
 		int ic1,ic2;
 		T* lin10;
@@ -906,7 +1049,8 @@ public:
 		}
 	}
 
-	void matrix_add_scaled(T** lin1,const T& scalef,T** lout, T& trout) {
+	template<typename sT>
+	void matrix_add_scaled(T** lin1,const sT& scalef,T** lout, T& trout) {
 		// add scalef*lin1[][] to lout[][] and set trout=trace(lout[][])
 		int ic1,ic2;
 		T* lin10;
@@ -1282,8 +1426,6 @@ public:
 		}
 	}
 
-
-
 	void get_trace(T** lin1,T& rout) {
 		// set rout=trace(lin1[][])
 		rout=0;
@@ -1384,368 +1526,7 @@ private:
 	T* al;
 	T** dal;
 	T** tmat;
-	ftype(*opf)(ftype,int);
-};
-
-
-template<class T>
-class sa_entry {
-public:
-	sa_entry():ind1(0),ind2(0),val(0) {
-
-	}
-	sa_entry(int ti1,int ti2,T tval): ind1(ti1),ind2(ti2),val(tval) {
-
-	}
-	void set(int ti1,int ti2,T tval) {
-		ind1=ti1;
-		ind2=ti2;
-		val=tval;
-	}
-	void clear() {
-		ind1=0;
-		ind2=0;
-		val=0;
-	}
-	~sa_entry() {
-
-	}
-	int ind1;
-	int ind2;
-	T val;
-};
-
-template<class T>
-class sparse_mat {
-public:
-	sparse_mat():n(0),nelem(0),elem(0) {
-
-	}
-	sparse_mat(int tn): n(tn) {
-		elem=new sa_entry<T>[n];
-		nelem=0;
-	}
-	void init(int tn) {
-		if(elem!=0) {
-			delete[] elem;
-			elem=0;
-		}
-
-		if(tn>0) {
-			n=tn;
-			elem=new sa_entry<T>[n];
-		}
-		nelem=0;
-	}
-	void push(int ti1,int ti2,T tval) {
-		elem[nelem].set(ti1,ti2,tval);
-		++nelem;
-	}
-	void pop() {
-		if(nelem>0) {
-			elem[nelem-1].clear();
-			--nelem;
-		}
-	}
-	~sparse_mat() {
-		delete[] elem;
-		nelem=0;
-	}
-	void print() {
-		T** tmat=new T*[n];
-		for(int i=0; i<n; ++i) {
-			tmat[i]=new T[n]();
-		}
-		for(int i=0; i<nelem; ++i) {
-			tmat[elem[i].ind1][elem[i].ind2]=elem[i].val;
-		}
-		std::cout<<std::endl;
-		for(int i=0; i<n; ++i) {
-			for(int j=0; j<n; ++j) {
-				std::cout<<tmat[i][j]<<" ";
-			}
-			std::cout<<std::endl;
-		}
-		std::cout<<std::endl;
-
-		for(int i=0; i<n; ++i) {
-			delete[] tmat[i];
-		}
-		delete[] tmat;
-	}
-	int nelem;
-	sa_entry<T>* elem;
-private:
-	int n;
-};
-
-class sun_algebra {
-public:
-	sun_algebra(int tn): ch(tn),tgen(0),telem0(0),telem(0) {
-		n=tn;
-		ngen=n*n-1;
-		generator=new sparse_mat<ctype>[ngen];
-		int i,j;
-		for(i=0; i<ngen; ++i) {
-			generator[i].init(n);
-		}
-
-		// symmetric generators
-		int igen=0;
-		for(i=0; i<n-1; ++i) {
-			for(j=i+1; j<n; ++j) {
-				sparse_mat<ctype>& tgen=generator[igen];
-				tgen.push(i,j,1);
-				tgen.push(j,i,1);
-				++igen;
-			}
-		}
-		// anti-symmetric generators
-		for(i=0; i<n-1; ++i) {
-			for(j=i+1; j<n; ++j) {
-				sparse_mat<ctype>& tgen=generator[igen];
-				tgen.push(i,j,ctype(0,-1));
-				tgen.push(j,i,ctype(0,1));
-				++igen;
-			}
-		}
-		// diagonal generators
-		for(i=0; i<n-1; ++i) {
-			sparse_mat<ctype>& tgen=generator[igen];
-			for(j=0; j<=i; ++j) {
-				tgen.push(j,j,std::sqrt(2.0/((ftype)(i+1)*(i+2))));		
-			}
-			tgen.push(i+1,i+1,-std::sqrt(2.0*(ftype)(i+1)/(ftype)(i+2)));
-			++igen;
-		}
-		tmat=new ctype*[n];
-		for(i=0; i<n; ++i) {
-			tmat[i]=new ctype[n]();
-		}
-		tmat2=new ctype*[n];
-		for(i=0; i<n; ++i) {
-			tmat2[i]=new ctype[n]();
-		}
-		tvec=new ftype[ngen]();
-	}
-
-	~sun_algebra() {
-		if(generator!=0) {
-			delete[] generator;
-		}
-		ngen=0;
-		for(int i=0; i<n; ++i) {
-			delete[] tmat[i];
-		}
-		delete[] tmat;
-		for(int i=0; i<n; ++i) {
-			delete[] tmat2[i];
-		}
-		delete[] tmat2;
-		delete[] tvec;
-		n=0;
-	}
-
-	void get_alg_mat_ah(ftype* invec,ctype** outmat) {
-		int i,j;
-		for(i=0; i<n; ++i) {
-			for(j=0; j<n; ++j) {
-				outmat[i][j]=0;
-			}
-		}
-		ctype nfc=ctype(0.0,0.5);
-		ctype tiv;
-		for(int igen=0; igen<ngen; ++igen) {
-			tgen=generator+igen;
-			telem0=tgen->elem;
-			tiv=nfc*invec[igen];
-			for(i=0; i<tgen->nelem; ++i) {
-				telem=telem0+i;
-				outmat[telem->ind1][telem->ind2]+=tiv*telem->val;
-			}	
-		}
-	}
-
-	void get_alg_mat_h(ftype* invec,ctype** outmat) {
-		int i,j;
-		for(i=0; i<n; ++i) {
-			for(j=0; j<n; ++j) {
-				outmat[i][j]=0;
-			}
-		}
-		ftype nfc=0.5;
-		ctype tiv;
-		for(int igen=0; igen<ngen; ++igen) {
-			tgen=generator+igen;
-			telem0=tgen->elem;
-			tiv=nfc*invec[igen];
-			for(i=0; i<tgen->nelem; ++i) {
-				telem=telem0+i;
-				outmat[telem->ind1][telem->ind2]+=tiv*telem->val;
-			}
-		}
-	}
-
-	void get_grp_mat(ftype* invec,ctype** outmat) {
-		int i,j;
-		for(i=0; i<n; ++i) {
-			for(j=0; j<n; ++j) {
-				tmat[i][j]=0;
-			}
-		}
-		ctype nfc=ctype(0.0,0.5);
-		ctype tiv;
-		for(int igen=0; igen<ngen; ++igen) {
-			tgen=generator+igen;
-			telem0=tgen->elem;
-			tiv=nfc*invec[igen];
-			for(i=0; i<tgen->nelem; ++i) {
-				telem=telem0+i;
-				tmat[telem->ind1][telem->ind2]+=tiv*telem->val;
-			}
-		}
-		ch(tmat,outmat);
-	}
-
-	void proj_ah(ctype** inmat,ftype* outvec) {
-		int i;
-		ftype tiv;
-		for(int igen=0; igen<ngen; ++igen) {
-			tgen=generator+igen;
-			telem0=tgen->elem;
-			tiv=0;
-			for(i=0; i<tgen->nelem; ++i) {
-				telem=telem0+i;
-				tiv+=std::imag(telem->val*inmat[telem->ind2][telem->ind1]);
-			}
-			outvec[igen]=tiv;
-		}
-	}
-
-	void proj_ah(ctype** inmat,ctype** outmat) {
-		int i,j;
-		for(i=0; i<n; ++i) {
-			for(j=0; j<n; ++j) {
-				outmat[i][j]=0;
-			}
-		}
-		ctype nfc=ctype(0.0,0.5);
-		ftype tiv;
-		ctype ttiv;
-		for(int igen=0; igen<ngen; ++igen) {
-			tgen=generator+igen;
-			telem0=tgen->elem;
-			tiv=0;
-			for(i=0; i<tgen->nelem; ++i) {
-				telem=telem0+i;
-				tiv+=std::imag(telem->val*inmat[telem->ind2][telem->ind1]);
-			}
-			ttiv=tiv*nfc;
-			for(i=0; i<tgen->nelem; ++i) {
-				telem=telem0+i;
-				outmat[telem->ind1][telem->ind2]+=ttiv*telem->val;
-			}
-		}
-	}
-
-	void proj_h(ctype** inmat,ftype* outvec) {
-		int i;
-		ftype tiv;
-		for(int igen=0; igen<ngen; ++igen) {
-			tgen=generator+igen;
-			telem0=tgen->elem;
-			tiv=0;
-			for(i=0; i<tgen->nelem; ++i) {
-				telem=telem0+i;
-				tiv+=std::real(telem->val*inmat[telem->ind2][telem->ind1]);
-			}
-			outvec[igen]=tiv;
-		}
-	}
-
-	void proj_h(ctype** inmat,ctype** outmat) {
-		int i,j;
-		for(i=0; i<n; ++i) {
-			for(j=0; j<n; ++j) {
-				outmat[i][j]=0;
-			}
-		}
-		ftype nfc=0.5;
-		ftype tiv;
-		for(int igen=0; igen<ngen; ++igen) {
-			tgen=generator+igen;
-			telem0=tgen->elem;
-			tiv=0;
-			for(i=0; i<tgen->nelem; ++i) {
-				telem=telem0+i;
-				tiv+=std::real(telem->val*inmat[telem->ind2][telem->ind1]);
-			}
-			tiv*=nfc;
-			for(i=0; i<tgen->nelem; ++i) {
-				telem=telem0+i;
-				outmat[telem->ind1][telem->ind2]+=tiv*telem->val;
-			}
-		}
-	}
-
-	void log_ah(ctype** inmat,ftype* outvec) {
-		int i;
-		for(i=0; i<ngen; ++i) {
-			outvec[i]=0;
-		}
-		ctype nfc=ctype(0.0,0.5);
-		ftype tiv;
-		ctype ttiv;
-		int maxit=5*n;
-		ftype tfprec=10.0*_fprec*(ftype)n*n;
-		ch.matrix_copy(inmat,tmat);
-		int it;
-		ftype outvn=0;
-		ftype tivn;
-		for(it=0; it<maxit; ++it) {
-			outvn=0;
-			tivn=0;
-			for(int igen=0; igen<ngen; ++igen) {
-				tgen=generator+igen;
-				telem0=tgen->elem;
-				tiv=0;
-				for(i=0; i<tgen->nelem; ++i) {
-					telem=telem0+i;
-					tiv+=std::imag(telem->val*tmat[telem->ind2][telem->ind1]);
-				}
-				outvec[igen]+=tiv;
-				outvn+=std::abs(outvec[igen]);
-				tivn+=std::abs(tiv);
-			}
-			if(tivn<tfprec*outvn) {
-				break;
-			}
-			ch.set_to_zero(tmat);
-			for(int igen=0; igen<ngen; ++igen) {
-				tgen=generator+igen;
-				telem0=tgen->elem;
-				ttiv=-nfc*outvec[igen];
-				for(i=0; i<tgen->nelem; ++i) {
-					telem=telem0+i;
-					tmat[telem->ind1][telem->ind2]+=ttiv*telem->val;
-				}
-			}
-			ch(tmat,tmat2); //matrix exponential
-			ch.matrix_mult_nn(inmat,tmat2,tmat);
-		}
-		std::cout<<"iterations: "<<it<<" , outvn: "<<outvn<< "("<<outvn*tfprec<<") , tivn: "<<tivn<<" , _fprec: "<<_fprec<<std::endl;
-	}
-
-
-	int n;
-	int ngen;
-	sparse_mat<ctype>* generator;
-	cayley_hamilton<ctype> ch;
-	ctype** tmat;
-	ctype** tmat2;
-	ftype* tvec;
-	sparse_mat<ctype>* tgen;
-	sa_entry<ctype>* telem0;
-	sa_entry<ctype>* telem;
+	fT* wps;
+	fT(*opf)(fT,int);
 };
 
