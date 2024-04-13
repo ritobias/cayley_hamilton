@@ -11,8 +11,8 @@ contains the implementation of the callable cayley_hamilton class with three ove
 contains the implementation of a sun_algebra class, which provides:
 - hermitian su(n) basis as sparse_mat objects
 - member functions to transform between su(n) vectors and su(n) matrices in either anti-hermition or hermitian rep.:
-   -- anti-hermitian: get_alg_mat_ah(invec[],outmat[][]) <--> proj_ah(inmat[][],outvec[])
-   -- hermitiaon: get_alg_mat_h(invec[],outmat[][]) <--> proj_h(inmat[][],outvec[])
+   * anti-hermitian: get_alg_mat_ah(invec[],outmat[][]) <--> proj_ah(inmat[][],outvec[])
+   * hermitiaon: get_alg_mat_h(invec[],outmat[][]) <--> proj_h(inmat[][],outvec[])
 - member function to take matrix log of SU(N) matrices and return corresponding su(n) vector: log_ah(inmat[][],outvec[])
 - member function to compute the SU(N) matrix corresponding to an su(n) vector: get_grp_mat(invec[],outmat[][]) (using the cayley_hamilton class)
 
