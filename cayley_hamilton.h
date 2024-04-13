@@ -1,3 +1,23 @@
+/*
+	header-only C++ implementation of the iterative Cayley-Hamilton method 
+	for computing matrix power series and their differentials (cf. arXiv:2404.07704)
+	Copyright (C) 2024  Tobias Rindlisbacher
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+	Email: ritobias@gmx.ch
+*/
 #pragma once
 #include<iostream>
 #include<algorithm>
@@ -5,30 +25,36 @@
 #include<limits>
 #include<cmath>
 
-typedef double ftype;
-typedef long double lftype;
+typedef double ftype; // floating point representation to be used
+typedef long double lftype; // long version of ftype
 
-typedef std::complex<ftype> ctype;
-typedef std::complex<lftype> lctype;
+typedef std::complex<ftype> ctype; // complex type corresponding to ftype
+typedef std::complex<lftype> lctype; // complex type corresponding to lftype
+
+typedef void (*opf)(ftype*,ftype*,ftype*);
 
 namespace type_helper {
+	// if T is not a std::complex type, then val_type<T>::type will be T itself
 	template<typename T>
 	struct val_type {
 		using type=T;
 	};
 
+	// if T is of type std::complex<fT>, then val_type<T>::type will be fT
 	template<typename T>
 	struct val_type<std::complex<T>> {
 		using type=typename std::complex<T>::value_type;
 	};
 
-
+	// if no long version of type T is defined, then long_type<T>::type will be T itself
 	template<typename T>
 	struct long_type { typedef T type; };
 
+	// if T is ftype, then long_type<T>::type will be lftype
 	template<>
 	struct long_type<ftype> { typedef lftype type; };
 
+	// if T is ctype, then long_type<T>:: type will be lctype
 	template<>
 	struct long_type<ctype> { typedef lctype type; };
 }
@@ -41,15 +67,21 @@ class cayley_hamilton {
 	// matrix power series (cf. arXiv:2404.07704).
 
 public:
-	using fT=typename type_helper::val_type<T>::type; // determines fT if T is std::complex<fT>, and sets fT=T otherwise
-	//using lT=typename type_helper::long_type<T>::type; // type corresponding to T but longer bit representation 
+	using fT=typename type_helper::val_type<T>::type; // underlying floating point type of type T
+	using lT=typename type_helper::long_type<T>::type; // longer bit representation of type T (if defined) or type T itself
 
 	cayley_hamilton(): n(0),a(0),pl(0),trpl(0),crpl(0),dpl(0),dtrpl(0),dcrpl(0),pal(0),dpal(0),al(0),dal(0),mmax(0),nhl_max(0),tmat(0),wps(0) {
+		//default constructor; will require a call to set_n() to set the size of the square matrices on which the class will operate
+
 		opf=[](fT pref,int i) { return pref/(fT)i; }; // returns the i-th coeff. of the power seris, computed from the (i-1)-th coeff. "pref" and "i"
 													        // default rule generates the coeffs. for the powerseries of exp(), i.e. 1/i!
 	}
 
-	cayley_hamilton(int tn) {
+	cayley_hamilton(int tn,fT(*topf)(fT,int)=0) {
+		// constrator with matrix size n=tn as argument and optional argument for function pointer that defines power series coeffients. 
+		if(topf!=0) {
+			opf=topf;
+		}
 		if(tn>0) {
 			n=tn;
 			new_matrix(a);
@@ -175,6 +207,7 @@ public:
 	void set_n(int tn) {
 		//if an instance has been created with the trivial/empty constructor, 
 		//this function has to be run afterwards to initialize the instance properly
+		//and to prepare it to operate on matrices of size nxn with n=tn
 		if(tn>0) {
 			if(tn!=n) {
 				if(a!=0) {
@@ -356,6 +389,11 @@ public:
 
 			n=0;
 		}
+	}
+
+	void set_opf(fT(*topf)(fT,int)) {
+		//set opf to point to a user-defined function or lambda for generating the power series coefficients
+		opf=topf;
 	}
 
 	void operator()(T** ain,T** aout,int rescale=0) {
@@ -1035,7 +1073,7 @@ public:
 	}
 
 	template<typename sT>
-	void matrix_add_scaled(T** lin1, const sT& scalef,T** lout) {
+	void matrix_add_scaled(T** lin1,const sT& scalef,T** lout) {
 		// add scalef*lin1[][] to lout[][]
 		int ic1,ic2;
 		T* lin10;

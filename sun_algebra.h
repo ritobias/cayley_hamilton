@@ -1,8 +1,30 @@
+/*
+	header-only C++ implementation of an su(n) Lie-algebra class
+	Copyright (C) 2024  Tobias Rindlisbacher
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+	Email: ritobias@gmx.ch
+*/
 #pragma once
 #include "cayley_hamilton.h"
 
+// note: type definitions (ftype, ctype, etc.) are done in cayley_hamilton.h 
+
 template<class T>
 class sa_entry {
+	// structure to hold row index (ind1), column index (ind2), and corresponding value (val) of a matrix component  
 public:
 	sa_entry():ind1(0),ind2(0),val(0) {
 
@@ -30,6 +52,7 @@ public:
 
 template<class T>
 class sparse_mat {
+	// sparse matrix class which stores the non-zero matrix elements as list of sa_entry objects
 public:
 	sparse_mat():n(0),nelem(0),elem(0) {
 
@@ -94,10 +117,12 @@ private:
 
 class sun_algebra {
 	// class providing:
-	// - su(n) basis as sparse matrix arrays 
-	// - member functions to transform between su(n) vectors and su(n) matrices
-	// - member function to take matrix log of SU(N) matrices
-	// - member function to compute the SU(N) matrix corresponding to an su(n) vector or matrix
+	// - hermitian su(n) basis as sparse_mat objects
+	// - member functions to transform between su(n) vectors and su(n) matrices in either anti-hermition or hermitian rep.:
+	//    -- anti-hermitian: get_alg_mat_ah(invec[],outmat[][]) <--> proj_ah(inmat[][],outvec[])
+	//    -- hermitiaon: get_alg_mat_h(invec[],outmat[][]) <--> proj_h(inmat[][],outvec[])
+	// - member function to take matrix log of SU(N) matrices and return corresponding su(n) vector: log_ah(inmat[][],outvec[])
+	// - member function to compute the SU(N) matrix corresponding to an su(n) vector: get_grp_mat(invec[],outmat[][])
 public:
 	sun_algebra(int tn): ch(tn),tgen(0),telem0(0),telem(0) {
 		n=tn;
@@ -323,9 +348,9 @@ public:
 		}
 	}
 
-	void log_ah(ctype** inmat,ftype* outvec) {
-		// compute the lie-algebra vector of the matrix log of the SU(n) matrix inmat[][] (cf.arXiv:2404.07704)
-		// this implementation does the lie-algebra projection step via projection on the anti-hermitian lie-algebra generators 
+	void get_log(ctype** inmat,ftype* outvec) {
+		// computes the lie-algebra vector representing the matrix log of the SU(n) matrix inmat[][] (cf.arXiv:2404.07704)
+		// (this implementation does the lie-algebra projection step via projection on the anti-hermitian lie-algebra generators) 
 		int i;
 		for(i=0; i<ngen; ++i) {
 			outvec[i]=0; //make sure, outvec[] is zero-vector

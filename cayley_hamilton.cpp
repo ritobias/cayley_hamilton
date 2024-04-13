@@ -1,3 +1,22 @@
+/*
+    cpp file for testing the sun_algebra and cayley_hamilton classes
+    Copyright (C) 2024  Tobias Rindlisbacher
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    Email: ritobias@gmx.ch
+*/
 #include<iostream>
 #include<random>
 #include "sun_algebra.h"
@@ -22,7 +41,7 @@ int main()
     ctype** ea;
     sun.ch.new_matrix(ea);
 
-    // specify a random vector "v" of length 2*alpha in Lie algebra space
+    // specify a random vector "v" of magnitude 2*alpha in space spanned by Lie algebra basis
     ftype alpha=5.0;
     ftype* v=new ftype[sun.ngen];
     ftype vnorm=0;
@@ -35,7 +54,7 @@ int main()
         v[i]*=2.0*alpha/vnorm;
     }
 
-    // get the anit-hermitian matrix a=i*v.T ,  where T={lambda_0 / 2, ..., lambda_ngen / 2}
+    // get the anit-hermitian matrix representation of "v": a=i*v.T ,  where T={lambda_0 / 2, ..., lambda_ngen / 2}
     sun.get_alg_mat_ah(v,a);
 
     std::cout<<"a:"<<std::endl;
@@ -60,7 +79,9 @@ int main()
     std::cout<<std::endl;
 
     // take the log of ea by determining the vector v in Lie algebra space for which ea=Exp(i*v.T) 
-    sun.log_ah(ea,v);
+    // (note that the result of this does not need to agree with the initial "v" if "alpha" has been chose sufficently large,
+    // so that "v" points outside of the injectivty domain of the exponential map exp_{id} : su(n)=T_{id}SU(n) -> SU(n))
+    sun.get_log(ea,v);
 
     // get the corresponding anti hermitian matrix a=i*v.T
     sun.get_alg_mat_ah(v,a);
@@ -75,6 +96,7 @@ int main()
     std::cout<<std::endl;
 
     // get the group matrix ea=Exp(i*v.T)
+    // (this should now agree again with the group matrix that was obtained with the original "v") 
     sun.get_grp_mat(v,ea);
 
     std::cout<<"ea=exp(lea):"<<std::endl;
@@ -86,7 +108,7 @@ int main()
     }
     std::cout<<std::endl;
 
-    if(0) {
+    if(1) {
         //test cayley_hamilton with a specific matrix to compare with known result  
         a[0][0]=ctype(0.939897479157750058,0.159364591527384149);
         a[0][1]=ctype(0.609542856276176626,-0.409090788157241629);
