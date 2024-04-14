@@ -8,6 +8,7 @@ contains the implementation of a callable cayley_hamilton class with three overl
 - only the matrix polynomial,
 - the matrix polynomial and its derivative in a given direction,
 - the matrix polynomial and all its derivatives.
+
 See comments in the header file for more details.
 
 
