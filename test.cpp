@@ -227,7 +227,7 @@ int main()
 
         // determine the matrix exponential ea2[][] of a[][] and the corresponding set differentials dea2[i][j][][]=dea2[][]/da[i][j]
         // using input matrix rescaling:
-        ch(a,ea2,dea2,1);
+        ch(a,ea2,dea2,0.001);
 
         // print the results for the matrix exponentials:
         std::cout<<"ea=exp(a):"<<std::endl;
@@ -243,6 +243,15 @@ int main()
         for(int i=0; i<n; ++i) {
             for(int j=0; j<n; ++j) {
                 std::cout<<ea2[i][j]<<" ";
+            }
+            std::cout<<std::endl;
+        }
+        std::cout<<std::endl;
+
+        std::cout<<"ea-ea2:"<<std::endl;
+        for(int i=0; i<n; ++i) {
+            for(int j=0; j<n; ++j) {
+                std::cout<<ea[i][j]-ea2[i][j]<<" ";
             }
             std::cout<<std::endl;
         }
@@ -264,6 +273,15 @@ int main()
                 for(int i=0; i<n; ++i) {
                     for(int j=0; j<n; ++j) {
                         std::cout<<"  "<<dea2[ic1][ic2][i][j]<<" ";
+                    }
+                    std::cout<<std::endl;
+                }
+                std::cout<<std::endl;
+
+                std::cout<<"dea["<<ic1<<"]["<<ic2<<"]-dea2["<<ic1<<"]["<<ic2<<"]:"<<std::endl;
+                for(int i=0; i<n; ++i) {
+                    for(int j=0; j<n; ++j) {
+                        std::cout<<"  "<<dea[ic1][ic2][i][j]-dea2[ic1][ic2][i][j]<<" ";
                     }
                     std::cout<<std::endl;
                 }

@@ -387,7 +387,7 @@ public:
 		opf=topf;
 	}
 
-	void operator()(T** ain,T** aout,int rescale=0) {
+	void operator()(T** ain,T** aout,fT rescale=0) {
 		// applies the power series defined by opf() to the matrix ain[][], using the Cayley-Hamilton recursion, 
 		// and writes the result to aout[][]
 		// if rescale is set to 1, then the computation will be performed with rescaled input matrix, which is
@@ -400,14 +400,14 @@ public:
 			//   the trace of the i-th matrix power of ta[][] is stored in trpl[i]
 			set_to_identity(pl[0]);
 			trpl[0]=n;
-			if(rescale==1) {
+			if(rescale>0) {
 				// if matrix rescaling is used, set sfac to be the magnitude of the largest element of ain[][]
 				// and initiate the computation of the matrix powers from ain[][]/sfac instead of ain[][]:
 				// (note that since we compute also the matrix powers pl[] from the rescaled matrix,
 				// the Cayley-Hamilton coefficient a_{k,j}, with k=0,1,...,\infty; j=0,...,n-1 
 				// will need to be rescaled only by a factor  sfac^{k}, instead of sfac^{k-j})
-				sfac=max_matrix_el(ain);
-				matrix_copy_scaled(ain,1.0/sfac,pl[1]);
+				sfac=1.0/rescale;
+				matrix_copy_scaled(ain,rescale,pl[1]);
 			} else {
 				matrix_copy(ain,pl[1]);
 			}
@@ -437,7 +437,7 @@ public:
 				pal[i]=0;
 				al[i]=wpf;
 				wpf=opf(wpf,i+1); //compute (i+1)-th power series coefficent from the i-th coefficient, using the rule defined by opf()
-				if(rescale==1) {
+				if(rescale>0) {
 					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
 					wpf*=sfac;
 				}
@@ -495,7 +495,7 @@ public:
 					rs=1.0;
 				}
 
-				if(rescale==1) {
+				if(rescale>0) {
 					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
 					wpf*=sfac;
 				}
@@ -514,7 +514,7 @@ public:
 		}
 	}
 
-	void operator()(T** ain,T** dain,T** aout,T** daout,int rescale=0) {
+	void operator()(T** ain,T** dain,T** aout,T** daout,fT rescale=0) {
 		// applies the power series defined by opf() to the matrix ain[][], using the Cayley-Hamilton recursion, 
 		// and writes the result to aout[][]; computes also the derivative of aout[][] with respect to ain[][] in
 		// the direction of dain[][] and write the result to daout[][].
@@ -526,14 +526,14 @@ public:
 			//   the trace of the i-th matrix power of ta[][] is stored in trpl[i]
 			set_to_identity(pl[0]);
 			trpl[0]=n;
-			if(rescale==1) {
+			if(rescale>0) {
 				// if matrix rescaling is used, set sfac to be the magnitude of the largest element of ain[][]
 				// and initiate the computation of the matrix powers from ain[][]/sfac instead of ain[][]:
 				// (note that since we compute also the matrix powers pl[] from the rescaled matrix,
 				// the Cayley-Hamilton coefficient a_{k,j}, with k=0,1,...,\infty; j=0,...,n-1 
 				// will need to be rescaled only by a factor  sfac^{k}, instead of sfac^{k-j})
-				sfac=max_matrix_el(ain);
-				matrix_copy_scaled(ain,1.0/sfac,pl[1]);
+				sfac=1.0/rescale;
+				matrix_copy_scaled(ain,rescale,pl[1]);
 			} else {
 				matrix_copy(ain,pl[1]);
 			}
@@ -561,10 +561,10 @@ public:
 			// compute the derivatives dpl[i][][] of the matrix powers pl[i][][] and corresponding traces dtrpl[i][][]
 			set_to_zero(tdpl[0]);
 			tdtrpl[0]=0;
-			if(rescale==1) {
+			if(rescale>0) {
 				//if we want to use wps factors from power siers also for the differentials,
 				//therefore need to rescale the differential basis as well:
-				matrix_copy_scaled(dain,1.0/sfac,tdpl[1]);
+				matrix_copy_scaled(dain,rescale,tdpl[1]);
 			} else {
 				matrix_copy(dain,tdpl[1]);
 			}
@@ -609,7 +609,7 @@ public:
 				tdpal[i]=0;
 				tdal[i]=0;
 				wpf=opf(wpf,i+1); //compute (i+1)-th power series coefficent from the i-th coefficient, using the rule defined by opf()
-				if(rescale==1) {
+				if(rescale>0) {
 					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
 					wpf*=sfac;
 				}
@@ -684,7 +684,7 @@ public:
 					rs=1.0;
 				}
 
-				if(rescale==1) {
+				if(rescale>0) {
 					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
 					wpf*=sfac;
 				}
@@ -711,7 +711,7 @@ public:
 		}
 	}
 
-	void operator()(T** ain,T** aout,T**** daout,int rescale=0) {
+	void operator()(T** ain,T** aout,T**** daout,fT rescale=0) {
 		// applies the power series defined by opf() to the matrix ain[][], using the Cayley-Hamilton recursion, 
 		// and writes the result to aout[][]; computes also the derivative of aout[][] with respect to each of 
 		// the nxn components of ain[][] and write the result to daout[][][][] (the first two indices define the component
@@ -725,11 +725,11 @@ public:
 			//   the trace of the i-th matrix power of ta[][] is stored in trpl[i]
 			set_to_identity(pl[0]);
 			trpl[0]=n;
-			if(rescale==1) {
+			if(rescale>0) {
 				// if matrix rescaling is used, set sfac to be the magnitude of the largest element of ain[][]
 				// and initiate the computation of the matrix powers from ain[][]/sfac instead of ain[][]:
-				sfac=max_matrix_el(ain);
-				matrix_copy_scaled(ain,1.0/sfac,pl[1]);
+				sfac=1.0/rescale;
+				matrix_copy_scaled(ain,rescale,pl[1]);
 			} else {
 				matrix_copy(ain,pl[1]);
 			}
@@ -765,12 +765,12 @@ public:
 					set_to_zero(tdpl[0]);
 					tdtrpl[0]=0;
 					set_to_zero(tdpl[1]);
-					if(rescale==1) {
+					if(rescale>0) {
 						//if we want to use wps factors from power siers also for the differentials,
 						//therefore need to rescale the differential basis as well:
-						tdpl[1][ic1][ic2]=1.0/sfac;
+						tdpl[1][ic1][ic2]=rescale;
 						if(ic1==ic2) {
-							tdtrpl[1]=1.0/sfac;
+							tdtrpl[1]=rescale;
 						} else {
 							tdtrpl[1]=0;
 						}
@@ -819,7 +819,7 @@ public:
 				pal[i]=0;
 				al[i]=wpf;
 				wpf=opf(wpf,i+1); //compute (i+1)-th power series coefficent from the i-th coefficient, using the rule defined by opf()
-				if(rescale==1) {
+				if(rescale>0) {
 					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
 					wpf*=sfac;
 				}
@@ -913,7 +913,7 @@ public:
 					rs=1.0;
 				}
 
-				if(rescale==1) {
+				if(rescale>0) {
 					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
 					wpf*=sfac;
 				}
@@ -974,24 +974,6 @@ public:
 			}
 			l01[ic1]=1.0;
 		}
-	}
-
-	fT max_matrix_el(T** lin1) {
-		// find and return the component of lin1[][] of largest magnitutde
-		int ic1,ic2;
-		T* lin10;
-		fT tres;
-		fT res=0;
-		for(ic1=0; ic1<n; ++ic1) {
-			lin10=lin1[ic1];
-			for(ic2=0; ic2<n; ++ic2) {
-				tres=std::abs(lin10[ic2]);
-				if(tres>res) {
-					res=tres;
-				}
-			}
-		}
-		return res;
 	}
 
 	void matrix_copy(T** lin1,T** lout) {
