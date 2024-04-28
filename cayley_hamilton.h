@@ -449,11 +449,14 @@ public:
 			T ch,cho,tch; // temporary variables for iteratin
 			int nhl=0; // counts the number of consecutive non-changing iterations  
 			int nch; // counts the number of unchanged al[] coefficients in the curret iteration 
+			fT s,rs=1.0; // used for normalizing the pal[]
 			for(j=n; j<mmax; ++j) {
 				nch=0;
+				pal[n-1]*=rs;
 				ch=-pal[n-1]*crpl[0];
-				cho=pal[0];
+				cho=pal[0]*rs;
 				pal[0]=ch;
+				s=std::norm(ch);
 				tch=al[0];
 				al[0]+=wpf*ch;
 				if(tch==al[0]) {
@@ -461,8 +464,9 @@ public:
 				}
 				for(i=1; i<n; ++i) {
 					ch=cho-pal[n-1]*crpl[i];
-					cho=pal[i];
+					cho=pal[i]*rs;
 					pal[i]=ch;
+					s+=std::norm(ch);
 					tch=al[i];
 					al[i]+=wpf*ch;
 					if(tch==al[i]) {
@@ -480,8 +484,16 @@ public:
 					// at least one al[] coefficent has changed during current iteration
 					nhl=0;
 				}
-
 				wpf=opf(wpf,j+1); //compute (i+1)-th power series coefficent from i-th coefficient, using the rule defined by opf()
+
+				if(s>1.0) {
+					// if s is bigger than 1, normalize pal[] and dpal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
+					s=std::sqrt(s);
+					wpf*=s;
+					rs=1.0/s;
+				} else {
+					rs=1.0;
+				}
 
 				if(rescale==1) {
 					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
@@ -609,15 +621,19 @@ public:
 			T ch,cho,tch; // temporary variables for iteratin
 			int nhl=0; // counts the number of consecutive non-changing iterations  
 			int nch; // counts the number of unchanged al[] coefficients in the curret iteration 
+			fT s,rs=1.0; // used for normalizing the pal[]
 			for(j=n; j<mmax; ++j) {
+
+				pal[n-1]*=rs; // rescale pal[n-1] before its first use in current iteration 
 				// first update the derivative terms, since they depen on the current value of pal[n-1]:
+				tdpal[n-1]*=rs; // rescale dpal[n-1]
 				ch=-tdpal[n-1]*crpl[0]-pal[n-1]*tdcrpl[0];
-				cho=tdpal[0];
+				cho=tdpal[0]*rs; // rescale dpal[0]
 				tdpal[0]=ch;
 				tdal[0]+=wpf*ch;
 				for(i=1; i<n; ++i) {
 					ch=cho-tdpal[n-1]*crpl[i]-pal[n-1]*tdcrpl[i];
-					cho=tdpal[i];
+					cho=tdpal[i]*rs; // rescale dpal[i]
 					tdpal[i]=ch;
 					tdal[i]+=wpf*ch;
 				}
@@ -625,8 +641,9 @@ public:
 				// now update the normal power series terms:
 				nch=0;
 				ch=-pal[n-1]*crpl[0];
-				cho=pal[0];
+				cho=pal[0]*rs;
 				pal[0]=ch;
+				s=std::norm(ch);
 				tch=al[0];
 				al[0]+=wpf*ch;
 				if(tch==al[0]) {
@@ -634,8 +651,9 @@ public:
 				}
 				for(i=1; i<n; ++i) {
 					ch=cho-pal[n-1]*crpl[i];
-					cho=pal[i];
+					cho=pal[i]*rs;
 					pal[i]=ch;
+					s+=std::norm(ch);
 					tch=al[i];
 					al[i]+=wpf*ch;
 					if(tch==al[i]) {
@@ -655,7 +673,17 @@ public:
 					nhl=0;
 				}
 
-				wpf=opf(wpf,j+1); //compute (i+1)-th power series coefficent from i-th coefficient, using the rule defined by opf()
+				wpf=opf(wpf,j+1); //compute (j+1)-th power series coefficent from j-th coefficient, using the rule defined by opf()
+
+				if(s>1.0) {
+					// if s is bigger than 1, normalize pal[] and dpal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
+					s=std::sqrt(s);
+					wpf*=s;
+					rs=1.0/s;
+				} else {
+					rs=1.0;
+				}
+
 				if(rescale==1) {
 					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
 					wpf*=sfac;
@@ -816,20 +844,24 @@ public:
 			T ch,cho,tch; // temporary variables for iteration
 			int nhl=0; // counts the number of consecutive non-changing iterations  
 			int nch; // counts the number of unchanged al[] coefficients in the curret iteration 
+			fT s,rs=1.0; // used for normalizing the pal[]
 			for(j=n; j<mmax; ++j) {
 
+				pal[n-1]*=rs; //rescale pal[n-1] 
 				// first update the derivative terms, since they depen on the current value of pal[n-1]:
 				for(idrv=0; idrv<n*n; ++idrv) {
 					tdcrpl=dcrpl[idrv];
 					tdpal=dpal[idrv];
 					tdal=dal[idrv];
+
+					tdpal[n-1]*=rs; // rescale dpal[][][n-1] 
 					ch=-tdpal[n-1]*crpl[0]-pal[n-1]*tdcrpl[0];
-					cho=tdpal[0];
+					cho=tdpal[0]*rs; // rescale dpal[][][0]
 					tdpal[0]=ch;
 					tdal[0]+=wpf*ch;
 					for(i=1; i<n; ++i) {
 						ch=cho-tdpal[n-1]*crpl[i]-pal[n-1]*tdcrpl[i];
-						cho=tdpal[i];
+						cho=tdpal[i]*rs; // rescale dpal[][][i]
 						tdpal[i]=ch;
 						tdal[i]+=wpf*ch;
 					}
@@ -838,8 +870,9 @@ public:
 				// now update the normal power series terms:
 				nch=0;
 				ch=-pal[n-1]*crpl[0];
-				cho=pal[0];
+				cho=pal[0]*rs;
 				pal[0]=ch;
+				s=std::norm(ch);
 				tch=al[0];
 				al[0]+=wpf*ch;
 				if(tch==al[0]) {
@@ -847,8 +880,9 @@ public:
 				}
 				for(i=1; i<n; ++i) {
 					ch=cho-pal[n-1]*crpl[i];
-					cho=pal[i];
+					cho=pal[i]*rs;
 					pal[i]=ch;
+					s+=std::norm(ch);
 					tch=al[i];
 					al[i]+=wpf*ch;
 					if(tch==al[i]) {
@@ -869,6 +903,16 @@ public:
 				}
 
 				wpf=opf(wpf,j+1); //compute (i+1)-th power series coefficent from i-th coefficient, using the rule defined by opf()
+
+				if(s>1.0) {
+					// if s is bigger than 1, normalize pal[] and dpal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
+					s=std::sqrt(s);
+					wpf*=s;
+					rs=1.0/s;
+				} else {
+					rs=1.0;
+				}
+
 				if(rescale==1) {
 					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
 					wpf*=sfac;
