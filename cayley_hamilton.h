@@ -432,14 +432,14 @@ public:
 				al[i]=wpf;
 				wpf=opf(wpf,i+1); //compute (i+1)-th power series coefficent from the i-th coefficient, using the rule defined by opf()
 
-				if(rescale>0) {
-					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
-					wpf*=sfac;
-				}
-
 				k=i/2;
 				for(j=i-k; j<=i; ++j) {
 					kmats[i-j][j]=wpf;
+				}
+
+				if(rescale>0) {
+					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
+					wpf*=sfac;
 				}
 			}
 			pal[n-1]=1.0;
@@ -447,10 +447,7 @@ public:
 			set_to_zero(kh);
 			k=(n-1)/2;
 			wpff=opf(wpf,n+1);
-			if(rescale>0) {
-				//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
-				wpff*=sfac;
-			}
+
 			for(i=n-1-k; i<n; ++i) {
 				kh[n-1-i][i]=wpff;
 			}
@@ -506,11 +503,6 @@ public:
 					rs=1.0;
 				}
 
-				if(rescale>0) {
-					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
-					wpf*=sfac;
-				}
-
 				for(i=0; i<n; ++i) {
 					pal[i]*=rs;
 					kho[i]=wpf*pal[i];
@@ -519,6 +511,7 @@ public:
 				wpff=opf(wpf,j+2)/wpf;
 				if(rescale>0) {
 					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
+					wpf*=sfac;
 					wpff*=sfac;
 				}
 				for(i=0; i<n; ++i) {
@@ -532,13 +525,6 @@ public:
 
 			}
 
-			if(rescale>0) {
-				for(i=0; i<n; ++i) {
-					for(k=i; k<n; ++k) {
-						kmats[i][k]*=rescale;
-					}
-				}
-			}
 
 			// form output matrix by summing the 0-th to (n-1)-th matrix powers pl[] with corresponding weights al[] 
 			set_to_identity_scaled(al[0],aout);
@@ -634,14 +620,14 @@ public:
 				al[i]=wpf;
 				wpf=opf(wpf,i+1); //compute (i+1)-th power series coefficent from the i-th coefficient, using the rule defined by opf()
 
-				if(rescale>0) {
-					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
-					wpf*=sfac;
-				}
-
 				k=i/2;
 				for(j=i-k; j<=i; ++j) {
 					kmats[i-j][j]=wpf;
+				}
+
+				if(rescale>0) {
+					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
+					wpf*=sfac;
 				}
 			}
 			pal[n-1]=1.0;
@@ -649,10 +635,6 @@ public:
 			set_to_zero(kh);
 			k=(n-1)/2;
 			wpff=opf(wpf,n+1);
-			if(rescale>0) {
-				//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
-				wpff*=sfac;
-			}
 			for(i=n-1-k; i<n; ++i) {
 				kh[n-1-i][i]=wpff;
 			}
@@ -708,11 +690,6 @@ public:
 					rs=1.0;
 				}
 
-				if(rescale>0) {
-					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
-					wpf*=sfac;
-				}
-
 				for(i=0; i<n; ++i) {
 					pal[i]*=rs;
 					kho[i]=wpf*pal[i];
@@ -721,6 +698,7 @@ public:
 				wpff=opf(wpf,j+2)/wpf;
 				if(rescale>0) {
 					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
+					wpf*=sfac;
 					wpff*=sfac;
 				}
 				for(i=0; i<n; ++i) {
@@ -732,14 +710,6 @@ public:
 					}
 				}
 
-			}
-
-			if(rescale>0) {
-				for(i=0; i<n; ++i) {
-					for(k=i; k<n; ++k) {
-						kmats[i][k]*=rescale;
-					}
-				}
 			}
 
 			// form output matrix by summing the 0-th to (n-1)-th matrix powers pl[] with corresponding weights al[] 
