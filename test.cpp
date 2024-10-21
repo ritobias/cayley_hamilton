@@ -132,31 +132,31 @@ int main()
         ch.new_matrix(ea);
 
         //test cayley_hamilton with a specific matrix to compare with known results  
-        a[0][0]=ctype(0,0.636104061890406358);
-        a[0][1]=ctype(0.415109700587091623,0.362251550192636662);
-        a[0][2]=ctype(0.262379162994905379,0.136152290260253661);
-        a[0][3]=ctype(1.000000000000000000,0.302688009059414176);
-        a[0][4]=ctype(0.220271715386512135,0.004099496443320860);
-        a[1][0]=ctype(-0.415109700587091623,0.362251550192636662);
-        a[1][1]=ctype(0,0.513824029910692648);
-        a[1][2]=ctype(0.158541011002899968,0.212282712425434950);
-        a[1][3]=ctype(0.207720347312592146,0.319752570609831199);
-        a[1][4]=ctype(0.174920870086319735,0.373122397555067487);
-        a[2][0]=ctype(-0.262379162994905379,0.136152290260253661);
-        a[2][1]=ctype(-0.158541011002899968,0.212282712425434950);
-        a[2][2]=ctype(0,-0.0573176593232183687);
-        a[2][3]=ctype(0.455199379282777317,0.138027494037257226);
-        a[2][4]=ctype(0.385696416370347461,0.182111326006295315);
-        a[3][0]=ctype(-1.000000000000000000,0.302688009059414176);
-        a[3][1]=ctype(-0.207720347312592146,0.319752570609831199);
-        a[3][2]=ctype(-0.455199379282777317,0.138027494037257226);
-        a[3][3]=ctype(0,-0.860541393898962115);
-        a[3][4]=ctype(0.205832835511187251,0.238577182257813214);
-        a[4][0]=ctype(-0.220271715386512135,0.004099496443320860);
-        a[4][1]=ctype(-0.174920870086319735,0.373122397555067487);
-        a[4][2]=ctype(-0.385696416370347461,0.182111326006295315);
-        a[4][3]=ctype(-0.205832835511187251,0.238577182257813214);
-        a[4][4]=ctype(0,-0.232069038578918335);
+        a[0][0]=ctype(0,0.850177714654586580);
+        a[0][1]=ctype(0.274160860652971849,0.032390014426889491);
+        a[0][2]=ctype(0.340537026101288887,0.180479527980594190);
+        a[0][3]=ctype(1.000000000000000000,0.369532334946793384);
+        a[0][4]=ctype(0.1010476580952816006,0.0120220519818148297);
+        a[1][0]=ctype(-0.274160860652971849,0.032390014426889491);
+        a[1][1]=ctype(0,0.1073405743445747240);
+        a[1][2]=ctype(0.240482580987094519,0.169218533199260390);
+        a[1][3]=ctype(0.0793172650637539167,0.0564989168424858690);
+        a[1][4]=ctype(0.484908776368710104,0.071918635695438216);
+        a[2][0]=ctype(-0.340537026101288887,0.180479527980594190);
+        a[2][1]=ctype(-0.240482580987094519,0.169218533199260390);
+        a[2][2]=ctype(0,0.349934243921792953);
+        a[2][3]=ctype(0.294899468664304942,0.292568842786627870);
+        a[2][4]=ctype(0.164813462851289394,0.252827614108137921);
+        a[3][0]=ctype(-1.000000000000000000,0.369532334946793384);
+        a[3][1]=ctype(-0.0793172650637539167,0.0564989168424858690);
+        a[3][2]=ctype(-0.294899468664304942,0.292568842786627870);
+        a[3][3]=ctype(0,-0.788927360417937651);
+        a[3][4]=ctype(0.493527673285568902,0.484649871927598008);
+        a[4][0]=ctype(-0.1010476580952816006,0.0120220519818148297);
+        a[4][1]=ctype(-0.484908776368710104,0.071918635695438216);
+        a[4][2]=ctype(-0.164813462851289394,0.252827614108137921);
+        a[4][3]=ctype(-0.493527673285568902,0.484649871927598008);
+        a[4][4]=ctype(0,-0.518525172503016440);
 
         std::cout<<"a:"<<std::endl;
         for(int i=0; i<n; ++i) {
@@ -183,7 +183,16 @@ int main()
         ch.new_matrix(tdea);
         ch.matrix_copy(a,tdea);
         ch(a,ea,tdea);
-        std::cout<<"tdea=dexp(a)(tdea):"<<std::endl;
+        std::cout<<"ea2=exp(a):"<<std::endl;
+        for(int i=0; i<n; ++i) {
+            for(int j=0; j<n; ++j) {
+                std::cout<<ea[i][j]<<" ";
+            }
+            std::cout<<std::endl;
+        }
+        std::cout<<std::endl;
+
+        std::cout<<"tdea=dexp(a)(a):"<<std::endl;
         for(int i=0; i<n; ++i) {
             for(int j=0; j<n; ++j) {
                 std::cout<<tdea[i][j]<<" ";
@@ -192,6 +201,84 @@ int main()
         }
         std::cout<<std::endl;
         ch.delete_matrix(tdea);
+
+        // determine the Cayley-Hamilton coefficients of the exp(a) and their differentials:
+        ctype* ra=new ctype[n];
+        ctype*** dra;
+        ch.new_matrix_array(dra,n);
+        ch(a,ra,dra);
+        std::cout<<"ra:"<<std::endl;
+        for(int i=0; i<n; ++i) {
+            std::cout<<ra[i]<<" ";
+        }
+        std::cout<<std::endl;
+        std::cout<<"dra:"<<std::endl;
+        for(int k=0; k<n; ++k) {
+            std::cout<<"dra["<<k<<"]:"<<std::endl;
+            for(int i=0; i<n; ++i) {
+                for(int j=0; j<n; ++j) {
+                    std::cout<<dra[k][i][j]<<" ";
+                }
+                std::cout<<std::endl;
+            }
+            std::cout<<std::endl;
+            std::cout<<std::endl;
+        }
+
+        ch(a,ea,dra,0.2);
+        std::cout<<std::endl;
+        std::cout<<"dra2:"<<std::endl;
+        for(int k=0; k<n; ++k) {
+            std::cout<<"dra2["<<k<<"]:"<<std::endl;
+            for(int i=0; i<n; ++i) {
+                for(int j=0; j<n; ++j) {
+                    std::cout<<dra[k][i][j]<<" ";
+                }
+                std::cout<<std::endl;
+            }
+            std::cout<<std::endl;
+            std::cout<<std::endl;
+        }
+
+        if(0) {
+            std::cout<<std::endl;
+            std::cout<<"dr:"<<std::endl;
+            ctype** tmat;
+            ch.new_matrix(tmat);
+            ctype** tapow;
+            ch.new_matrix(tapow);
+            ctype** ttapow;
+            ch.new_matrix(ttapow);
+            for(int ic1=0; ic1<n; ++ic1) {
+                for(int ic2=0; ic2<n; ++ic2) {
+                    std::cout<<"dr["<<ic1<<"]["<<ic2<<"]:"<<std::endl;
+                    ch.set_to_zero(tmat);
+                    ch.set_to_identity(tapow);
+                    for(int k=0; k<n; ++k) {
+                        ch.matrix_mult_scalar_add(tapow,dra[k][ic1][ic2],tmat);
+                        ch.matrix_mult_nn(tapow,a,ttapow);
+                        ch.matrix_copy(ttapow,tapow);
+                    }
+                    for(int i=0; i<n; ++i) {
+                        for(int j=0; j<n; ++j) {
+                            std::cout<<tmat[i][j]<<" ";
+                        }
+                        std::cout<<std::endl;
+                    }
+                    std::cout<<std::endl;
+                    std::cout<<std::endl;
+
+                }
+                std::cout<<std::endl;
+            }
+            std::cout<<std::endl;
+            ch.delete_matrix(tmat);
+            ch.delete_matrix(tapow);
+            ch.delete_matrix(ttapow);
+        }
+        delete[] ra;
+        ch.delete_matrix_array(dra,n);
+    
 
 
 
