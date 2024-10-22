@@ -206,7 +206,7 @@ int main()
         ctype* ra=new ctype[n];
         ctype*** dra;
         ch.new_matrix_array(dra,n);
-        ch(a,ra,dra);
+        ch.get_r_dr(a,ra,dra);
         std::cout<<"ra:"<<std::endl;
         for(int i=0; i<n; ++i) {
             std::cout<<ra[i]<<" ";
@@ -215,32 +215,11 @@ int main()
         std::cout<<"dra:"<<std::endl;
         for(int k=0; k<n; ++k) {
             std::cout<<"dra["<<k<<"]:"<<std::endl;
-            for(int i=0; i<n; ++i) {
-                for(int j=0; j<n; ++j) {
-                    std::cout<<dra[k][i][j]<<" ";
-                }
-                std::cout<<std::endl;
-            }
-            std::cout<<std::endl;
+            ch.print_matrix(dra[k]);
             std::cout<<std::endl;
         }
 
-        ch(a,ea,dra,0.2);
-        std::cout<<std::endl;
-        std::cout<<"dra2:"<<std::endl;
-        for(int k=0; k<n; ++k) {
-            std::cout<<"dra2["<<k<<"]:"<<std::endl;
-            for(int i=0; i<n; ++i) {
-                for(int j=0; j<n; ++j) {
-                    std::cout<<dra[k][i][j]<<" ";
-                }
-                std::cout<<std::endl;
-            }
-            std::cout<<std::endl;
-            std::cout<<std::endl;
-        }
-
-        if(0) {
+        if(1) {
             std::cout<<std::endl;
             std::cout<<"dr:"<<std::endl;
             ctype** tmat;

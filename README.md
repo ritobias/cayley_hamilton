@@ -8,6 +8,9 @@ contains the implementation of a callable cayley_hamilton class with three overl
 - only the matrix polynomial,
 - the matrix polynomial and its derivative in a given direction,
 - the matrix polynomial and all its derivatives.
+cointains two further subroutines:
+- get_r_k computes and returns the Cayley-Hamilton decomposition coefficents for the matrix polynomial and of its derivatives
+- get_r_dr computes and returns the Cayley-Hamilton decomposition coefficients of the matrix polynomial and the derivatives of these coefficients 
 
 See comments in the header file for more details.
 
