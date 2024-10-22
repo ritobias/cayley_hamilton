@@ -68,7 +68,7 @@ public:
 	using fT=typename type_helper::val_type<T>::type; // underlying floating point type of type T
 	using lT=typename type_helper::long_type<T>::type; // longer bit representation of type T (if defined) or type T itself
 
-	cayley_hamilton(): n(0),pl(0),trpl(0),crpl(0),pal(0),al(0),kho(0),mmax(0),nhl_max(0),tmat1(0),tmat2(0) {
+	cayley_hamilton(): n(0),pl(0),trpl(0),crpl(0),pal(0),al(0),mmax(0),nhl_max(0),tmat1(0),tmat2(0) {
 		//default constructor; will require a call to set_n() to set the size of the square matrices on which the class will operate
 
 		opf=[](fT pref,int i) { return pref/(fT)i; }; // returns the i-th coeff. of the power seris, computed from the (i-1)-th coeff. "pref" and "i"
@@ -91,7 +91,6 @@ public:
 			crpl=new T[n+1]();
 			pal=new T[n]();
 			al=new T[n]();
-			kho=new T[n]();
 			opf=[](fT pref,int i) { return pref/(fT)i; };
 			mmax=100*n;
 			nhl_max=3;
@@ -105,7 +104,6 @@ public:
 			crpl=0;
 			pal=0;
 			al=0;
-			kho=0;
 			opf=[](fT pref,int i) { return pref/(fT)i; };
 			mmax=100;
 			nhl_max=3;
@@ -138,10 +136,6 @@ public:
 		if(al!=0) {
 			delete[] al;
 			al=0;
-		}
-		if(kho!=0) {
-			delete[] kho;
-			kho=0;
 		}
 		n=0;
 	}
@@ -179,10 +173,6 @@ public:
 					delete[] al;
 					al=0;
 				}
-				if(kho!=0) {
-					delete[] kho;
-					kho=0;
-				}
 
 				n=tn;
 
@@ -199,8 +189,6 @@ public:
 				pal=new T[n];
 
 				al=new T[n];
-
-				kho=new T[n];
 				
 				mmax=100*n;
 			}
@@ -231,10 +219,6 @@ public:
 				delete[] al;
 				al=0;
 			}
-			if(kho!=0) {
-				delete[] kho;
-				kho=0;
-			}
 			mmax=0;
 
 			n=0;
@@ -245,135 +229,6 @@ public:
 		//set opf to point to a user-defined function or lambda for generating the power series coefficients
 		opf=topf;
 	}
-
-	/*
-	void operator()(T** ain,T** aout,fT rescale=0) {
-		// applies the power series defined by opf() to the matrix ain[][], using the Cayley-Hamilton recursion, 
-		// and writes the result to aout[][]
-		// if rescale is set to 1, then the computation will be performed with rescaled input matrix, which is
-		// useful for matrices of large norm; if rescale isset to 0, no matrix rescaling will be performed. 
-		if(n>0) {
-			int i,j,k;
-			fT sfac=1.0; //scaling factor
-			// compute the 0-th to n-th matrix powers of ta[][] :
-			//   the i-th matrix power of ta[][] is stored in pl[i][][]
-			//   the trace of the i-th matrix power of ta[][] is stored in trpl[i]
-			set_to_identity(pl[0]);
-			trpl[0]=n;
-			if(rescale>0) {
-				// if matrix rescaling is used, set sfac to be the magnitude of the largest element of ain[][]
-				// and initiate the computation of the matrix powers from ain[][]/sfac instead of ain[][]:
-				// (note that since we compute also the matrix powers pl[] from the rescaled matrix,
-				// the Cayley-Hamilton coefficient a_{k,j}, with k=0,1,...,\infty; j=0,...,n-1 
-				// will need to be rescaled only by a factor  sfac^{k}, instead of sfac^{k-j})
-				sfac=1.0/rescale;
-				matrix_copy_scaled(ain,rescale,pl[1]);
-			} else {
-				matrix_copy(ain,pl[1]);
-			}
-			get_trace(pl[1],trpl[1]);
-			for(i=2; i<=n; ++i) {
-				j=i/2;
-				k=i%2;
-				matrix_mult_nn(pl[j],pl[j+k],pl[i],trpl[i]);
-			}
-
-			// compute the characteristic polynomial crpl[] from the traced powers trpl[] :
-			crpl[n]=1;
-			for(j=1; j<=n; ++j) {
-				crpl[n-j]=-trpl[j];
-				for(i=1; i<j; ++i) {
-					crpl[n-j]-=crpl[n-(j-i)]*trpl[i];
-				}
-				crpl[n-j]/=j;
-			}
-
-			// compute iteratively the n coefficients al[] so that the Cayley-Hamilton result
-			// for the matrix power series is given by aout[][] = sum_i{al[i]*pl[i][][]} :
-
-			// set initial values for the n entries in al[] and pal[] :
-			fT wpf=1.0; //leading coefficient of power series
-			for(i=0; i<n; ++i) {
-				pal[i]=0;
-				al[i]=wpf;
-				wpf=opf(wpf,i+1); //compute (i+1)-th power series coefficent from the i-th coefficient, using the rule defined by opf()
-				if(rescale>0) {
-					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
-					wpf*=sfac;
-				}
-			}
-			pal[n-1]=1.0;
-
-			// next we iteratively add higher order power series terms to al[] till al[] stops changing
-			// more precisely: the iteration will terminate after nhl_max consecutive iterations have not changed al[]	
-			T ch,cho,tch; // temporary variables for iterating
-			int nhl=0; // counts the number of consecutive non-changing iterations  
-			int nch; // counts the number of unchanged al[] coefficients in the curret iteration 
-			fT s,rs=1.0; // used for normalizing the pal[]
-			for(j=n; j<mmax; ++j) {
-				nch=0;
-				pal[n-1]*=rs;
-				ch=-pal[n-1]*crpl[0];
-				cho=pal[0]*rs;
-				pal[0]=ch;
-				s=std::norm(ch);
-				tch=al[0];
-				al[0]+=wpf*ch;
-				if(tch==al[0]) {
-					++nch;
-				}
-				for(i=1; i<n; ++i) {
-					ch=cho-pal[n-1]*crpl[i];
-					cho=pal[i]*rs;
-					pal[i]=ch;
-					s+=std::norm(ch);
-					tch=al[i];
-					al[i]+=wpf*ch;
-					if(tch==al[i]) {
-						++nch;
-					}
-				}
-				if(nch>=n) {
-					// no al[] coefficient has changed during current iteration
-					++nhl;
-					if(nhl>=nhl_max) {
-						//terminate iteration
-						break;
-					}
-				} else {
-					// at least one al[] coefficent has changed during current iteration
-					nhl=0;
-				}
-				wpf=opf(wpf,j+1); //compute (i+1)-th power series coefficent from i-th coefficient, using the rule defined by opf()
-
-				if(s>1.0) {
-					// if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
-					s=std::sqrt(s);
-					wpf*=s;
-					rs=1.0/s;
-				} else {
-					rs=1.0;
-				}
-
-				if(rescale>0) {
-					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
-					wpf*=sfac;
-				}
-
-			}
-
-			// form output matrix by summing the 0-th to (n-1)-th matrix powers pl[] with corresponding weights al[] 
-			for(i=0; i<n; ++i) {
-				for(j=0; j<n; ++j) {
-					aout[i][j]=al[0]*pl[0][i][j];
-					for(k=1; k<n; ++k) {
-						aout[i][j]+=al[k]*pl[k][i][j];
-					}
-				}
-			}
-		}
-	}
-	*/
 
 	void operator()(T** ain,T** aout,fT rescale=0) {
 		// applies the power series defined by opf() to the matrix ain[][], using the Cayley-Hamilton recursion, 
@@ -492,7 +347,6 @@ public:
 		}
 	}
 
-
 	void operator()(T** ain,T** aout,T** daout,fT rescale=0) {
 		// applies the power series defined by opf() to the matrix ain[][], using the Cayley-Hamilton recursion, 
 		// and writes the result to aout[][]; computes also the derivative of aout[][] in the direction of
@@ -543,7 +397,7 @@ public:
 			// for the matrix power series is given by aout[][] = sum_i{al[i]*pl[i][][]} :
 
 			// set initial values for the n entries in al[] and pal[] and the nxn entries in kmats[][] :
-			fT wpf=1.0,twpf=1.0,ttwpf,wpff; //leading coefficient of power series and of running sum used for convergence check
+			fT wpf=1.0,twpf=1.0,ttwpf; //leading coefficient of power series and of running sum used for convergence check
 			set_to_zero(kmats);
 			for(i=0; i<n; ++i) {
 				pal[i]=0;
@@ -559,15 +413,14 @@ public:
 					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
 					wpf*=sfac;
 				}
+				twpf+=wpf;
 			}
 			pal[n-1]=1.0;
 			// set initial values for the entries in kh[][] :
 			set_to_zero(kh);
 			k=(n-1)/2;
-			wpff=opf(wpf,n+1);
-
 			for(i=n-1-k; i<n; ++i) {
-				kh[n-1-i][i]=wpff;
+				kh[n-1-i][i]=1.0;
 			}
 
 
@@ -578,9 +431,9 @@ public:
 			fT s,rs=1.0; // used for normalizing the pal[]
 			for(j=n; j<mmax; ++j) {
 				s=0;
-				cho=pal[n-1];
+				cho=pal[n-1]*rs;
 				for(i=n-1; i>0; --i) {
-					pal[i]=pal[i-1]-cho*crpl[i];
+					pal[i]=pal[i-1]*rs-cho*crpl[i];
 					s+=std::norm(pal[i]);
 					al[i]+=wpf*pal[i];
 				}
@@ -599,32 +452,18 @@ public:
 					rs=1.0;
 				}
 
-				for(i=0; i<n; ++i) {
-					pal[i]*=rs;
-				}
-
-				wpff=opf(wpf,j+2)/wpf;
-				if(rescale>0) {
-					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
-					wpff*=sfac;
-				}
-
 				for(i=n-1; i>=0; --i) {
-					cho=kh[i][n-1];
+					cho=kh[i][n-1]*rs;
 					for(k=n-1; k>i; --k) {
-						kh[i][k]=kh[i][k-1]-cho*crpl[k];
-						kmats[i][k]+=kh[i][k];
-						kh[i][k]*=wpff;
+						kh[i][k]=kh[i][k-1]*rs-cho*crpl[k];
+						kmats[i][k]+=wpf*kh[i][k];
 					}
 					if(i>0) {
-						kh[i][i]=kh[i-1][i]-cho*crpl[i];
-						kmats[i][i]+=kh[i][i];
-						kh[i][i]*=wpff;
+						kh[i][i]=kh[i-1][i]*rs-cho*crpl[i];
 					} else {
-						kh[0][0]=wpf*pal[0]-cho*crpl[0];
-						kmats[0][0]+=kh[0][0];
-						kh[0][0]*=wpff;
+						kh[0][0]=pal[0]*rs-cho*crpl[0];
 					}
+					kmats[i][i]+=wpf*kh[i][i];
 				}
 
 				if(rescale>0) {
@@ -734,7 +573,7 @@ public:
 			// for the matrix power series is given by aout[][] = sum_i{al[i]*pl[i][][]} :
 
 			// set initial values for the n entries in al[] and pal[] and the nxn entries in kmats[][] :
-			fT wpf=1.0, wpff; //leading coefficient of power series
+			fT wpf=1.0,twpf=1.0,ttwpf; //leading coefficient of power series and of running sum used for convergence check
 			set_to_zero(kmats);
 			for(i=0; i<n; ++i) {
 				pal[i]=0;
@@ -750,56 +589,34 @@ public:
 					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
 					wpf*=sfac;
 				}
+				twpf+=wpf;
 			}
 			pal[n-1]=1.0;
 			// set initial values for the entries in kh[][] :
 			set_to_zero(kh);
 			k=(n-1)/2;
-			wpff=opf(wpf,n+1);
 			for(i=n-1-k; i<n; ++i) {
-				kh[n-1-i][i]=wpff;
+				kh[n-1-i][i]=1.0;
 			}
 
 
 			// next we iteratively add higher order power series terms to al[] till al[] stops changing
 			// more precisely: the iteration will terminate after nhl_max consecutive iterations have not changed al[]	
-			T ch,cho,tch; // temporary variables for iterating
+			T cho; // temporary variables for iterating
 			int nhl=0; // counts the number of consecutive non-changing iterations  
-			int nch; // counts the number of unchanged al[] coefficients in the curret iteration 
 			fT s,rs=1.0; // used for normalizing the pal[]
 			for(j=n; j<mmax; ++j) {
-				nch=0;
-				ch=-pal[n-1]*crpl[0];
-				cho=pal[0];
-				pal[0]=ch;
-				s=std::norm(ch);
-				tch=al[0];
-				al[0]+=wpf*ch;
-				if(tch==al[0]) {
-					++nch;
+				s=0;
+				cho=pal[n-1]*rs;
+				for(i=n-1; i>0; --i) {
+					pal[i]=pal[i-1]*rs-cho*crpl[i];
+					s+=std::norm(pal[i]);
+					al[i]+=wpf*pal[i];
 				}
-				for(i=1; i<n; ++i) {
-					ch=cho-pal[n-1]*crpl[i];
-					cho=pal[i];
-					pal[i]=ch;
-					s+=std::norm(ch);
-					tch=al[i];
-					al[i]+=wpf*ch;
-					if(tch==al[i]) {
-						++nch;
-					}
-				}
-				if(nch>=n) {
-					// no al[] coefficient has changed during current iteration
-					++nhl;
-					if(nhl>=nhl_max) {
-						//terminate iteration
-						break;
-					}
-				} else {
-					// at least one al[] coefficent has changed during current iteration
-					nhl=0;
-				}
+				pal[0]=-cho*crpl[0];
+				s+=std::norm(pal[0]);
+				al[0]+=wpf*pal[0];
+
 				wpf=opf(wpf,j+1); //compute (i+1)-th power series coefficent from i-th coefficient, using the rule defined by opf()
 
 				if(s>1.0) {
@@ -811,24 +628,35 @@ public:
 					rs=1.0;
 				}
 
-				for(i=0; i<n; ++i) {
-					pal[i]*=rs;
-					kho[i]=wpf*pal[i];
+				for(i=n-1; i>=0; --i) {
+					cho=kh[i][n-1]*rs;
+					for(k=n-1; k>i; --k) {
+						kh[i][k]=kh[i][k-1]*rs-cho*crpl[k];
+						kmats[i][k]+=wpf*kh[i][k];
+					}
+					if(i>0) {
+						kh[i][i]=kh[i-1][i]*rs-cho*crpl[i];
+					} else {
+						kh[0][0]=pal[0]*rs-cho*crpl[0];
+					}
+					kmats[i][i]+=wpf*kh[i][i];
 				}
 
-				wpff=opf(wpf,j+2)/wpf;
 				if(rescale>0) {
 					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
 					wpf*=sfac;
-					wpff*=sfac;
 				}
-				for(i=0; i<n; ++i) {
-					for(k=i; k<n; ++k) {
-						ch=kho[k]-kh[k][n-1]*crpl[i];
-						kho[k]=kh[i][k];
-						kh[i][k]=ch*wpff;
-						kmats[i][k]+=ch;
+
+				ttwpf=twpf;
+				twpf+=wpf;
+				if(ttwpf==twpf) {
+					++nhl;
+					if(nhl>=nhl_max) {
+						//terminate iteration
+						break;
 					}
+				} else {
+					nhl=0;
 				}
 
 			}
@@ -889,197 +717,14 @@ public:
 		}
 	}
 
-	void operator()(T** ain,T* rout,T*** drout,fT rescale=0) {
+	void get_r_k(T** ain,T* rout,T** kout,fT rescale=0) {
 		// applies the power series defined by opf() to the matrix ain[][], using the Cayley-Hamilton recursion, 
-		// and writes Cayley-Hamilton coefficients to rout[]; computes also the derivatives of rout[] with respect
-		// to the components of ain[][] and writes the result to the list of matrices drout[][][] :
+		// and writes the Cayley-Hamilton coefficients to rout[]; computes also the decomposition matrix of the derivative
+		// of rout[] with respect to the components of ain[][] and writes the result to kout[][] :
 		if(n>0) {
+			T* rl=rout;
 			// use unused entries of pl[] as storage for computation of differentaial components:
-			T** kmats=pl[0];
-			T** kh=pl[n];
-
-			int i,j,k;
-			fT sfac=1.0; //scaling factor
-			// compute the 0-th to n-th matrix powers of ta[][] :
-			//   the i-th matrix power of ta[][] is stored in pl[i][][]
-			//   the trace of the i-th matrix power of ta[][] is stored in trpl[i]
-			trpl[0]=n;
-			if(rescale>0) {
-				// if matrix rescaling is used, set sfac to be the magnitude of the largest element of ain[][]
-				// and initiate the computation of the matrix powers from ain[][]/sfac instead of ain[][]:
-				// (note that since we compute also the matrix powers pl[] from the rescaled matrix,
-				// the Cayley-Hamilton coefficient a_{k,j}, with k=0,1,...,\infty; j=0,...,n-1 
-				// will need to be rescaled only by a factor  sfac^{k}, instead of sfac^{k-j})
-				sfac=1.0/rescale;
-				matrix_copy_scaled(ain,rescale,pl[1]);
-			} else {
-				matrix_copy(ain,pl[1]);
-			}
-			get_trace(pl[1],trpl[1]);
-			for(i=2; i<n; ++i) {
-				j=i/2;
-				k=i%2;
-				matrix_mult_nn(pl[j],pl[j+k],pl[i],trpl[i]);
-			}
-			j=n/2;
-			k=n%2;
-			matrix_mult_trace_nn(pl[j],pl[j+k],trpl[n]);
-
-			// compute the characteristic polynomial crpl[] from the traced powers trpl[] :
-			crpl[n]=1;
-			for(j=1; j<=n; ++j) {
-				crpl[n-j]=-trpl[j];
-				for(i=1; i<j; ++i) {
-					crpl[n-j]-=crpl[n-(j-i)]*trpl[i];
-				}
-				crpl[n-j]/=j;
-			}
-
-			T*** dcrpl;
-			new_matrix_array(dcrpl,n+1);
-			set_to_identity_scaled(-crpl[n],dcrpl[n-1]);
-			for(j=2; j<=n; ++j) {
-				matrix_copy_scaled(pl[j-1],-(fT)j,dcrpl[n-j]);
-				matrix_add(-crpl[n-(j-1)],dcrpl[n-j]);
-				matrix_mult_scalar_add(dcrpl[n-(j-1)],trpl[1],dcrpl[n-j]);
-				for(i=2; i<j; ++i) {
-					matrix_mult_scalar_sub(pl[i-1],(fT)i*crpl[n-(j-i)],dcrpl[n-j]);
-					matrix_mult_scalar_sub(dcrpl[n-(j-i)],trpl[i],dcrpl[n-j]);
-				}
-				matrix_mult_scalar(dcrpl[n-j],1.0/j,dcrpl[n-j]);
-			}
-
-			// compute iteratively the n coefficients al[] so that the Cayley-Hamilton result
-			// for the matrix power series is given by aout[][] = sum_i{al[i]*pl[i][][]} :
-
-			// set initial values for the n entries in al[] and pal[] and the nxn entries in kmats[][] :
-			fT wpf=1.0; //leading coefficient of power series
-			for(i=0; i<n; ++i) {
-				pal[i]=0;
-				rout[i]=wpf;
-				wpf=opf(wpf,i+1); //compute (i+1)-th power series coefficent from the i-th coefficient, using the rule defined by opf()
-
-				if(rescale>0) {
-					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
-					wpf*=sfac;
-				}
-			}
-			pal[n-1]=1.0;
-
-			// set initial values for the entries in drout[][][] and dpal[][][]
-			T*** dpal;
-			new_matrix_array(dpal,n,0);
-
-			// next we iteratively add higher order power series terms to al[] till al[] stops changing
-			// more precisely: the iteration will terminate after nhl_max consecutive iterations have not changed al[]	
-			T ch,cho,tch; // temporary variables for iterating
-			T** dch;
-			new_matrix(dch);
-			T** dcho;
-			new_matrix(dcho);
-			int nhl=0; // counts the number of consecutive non-changing iterations  
-			int nch; // counts the number of unchanged al[] coefficients in the curret iteration 
-			fT s,rs=1.0; // used for normalizing the pal[]
-			for(j=n; j<mmax; ++j) {
-				pal[n-1]*=rs;
-				matrix_mult_scalar(dpal[n-1],rs,dpal[n-1]);
-				nch=0;
-				ch=-pal[n-1]*crpl[0];
-
-				matrix_mult_scalar(dpal[n-1],-crpl[0],dch);
-				matrix_mult_scalar_sub(dcrpl[0],pal[n-1],dch);
-
-				cho=pal[0]*rs;
-				pal[0]=ch;
-
-				matrix_mult_scalar(dpal[0],rs,dcho);
-				matrix_copy(dch,dpal[0]);
-
-				s=std::norm(ch);
-				tch=rout[0];
-				rout[0]+=wpf*ch;
-				
-				matrix_mult_scalar_add(dch,wpf,drout[0]);
-
-				if(tch==rout[0]) {
-					++nch;
-				}
-				for(i=1; i<n; ++i) {
-					ch=cho-pal[n-1]*crpl[i];
-
-					matrix_copy(dcho,dch);
-					matrix_mult_scalar_sub(dpal[n-1],crpl[i],dch);
-					matrix_mult_scalar_sub(dcrpl[i],pal[n-1],dch);
-
-					cho=pal[i]*rs;
-					pal[i]=ch;
-
-					matrix_mult_scalar(dpal[i],rs,dcho);
-					matrix_copy(dch,dpal[i]);
-
-					s+=std::norm(ch);
-					tch=rout[i];
-					rout[i]+=wpf*ch;
-
-					matrix_mult_scalar_add(dch,wpf,drout[i]);
-
-					if(tch==rout[i]) {
-						++nch;
-					}
-				}
-				if(nch>=n) {
-					// no al[] coefficient has changed during current iteration
-					++nhl;
-					if(nhl>=nhl_max) {
-						//terminate iteration
-						break;
-					}
-				} else {
-					// at least one al[] coefficent has changed during current iteration
-					nhl=0;
-				}
-				wpf=opf(wpf,j+1); //compute (i+1)-th power series coefficent from i-th coefficient, using the rule defined by opf()
-
-				if(s>1.0) {
-					// if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
-					s=std::sqrt(s);
-					wpf*=s;
-					rs=1.0/s;
-				} else {
-					rs=1.0;
-				}
-
-				if(rescale>0) {
-					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
-					wpf*=sfac;
-				}
-
-			}
-
-			if(rescale>0) {
-				wpf=rescale;
-				matrix_mult_scalar(drout[0],wpf,drout[0]);
-				for(k=1; k<n; ++k) {
-					rout[k]*=wpf;
-					wpf*=rescale;
-					matrix_mult_scalar(drout[k],wpf,drout[k]);
-				}
-			}
-
-			delete_matrix(dch);
-			delete_matrix(dcho);
-			delete_matrix_array(dpal,n);
-			delete_matrix_array(dcrpl,n+1);
-		}
-	}
-
-	void operator()(T** ain,T** aout,T*** drout,fT rescale=0) {
-		// applies the power series defined by opf() to the matrix ain[][], using the Cayley-Hamilton recursion, 
-		// and writes the result to aout[][]; computes also the derivative of aout[][] in the direction of
-		// daout[][] and overwrite daout[][] with the result :
-		if(n>0) {
-			// use unused entries of pl[] as storage for computation of differentaial components:
-			T** kmats=pl[0];
+			T** kmats=kout;
 			T** kh=pl[n];
 
 			int i,j,k;
@@ -1123,11 +768,11 @@ public:
 			// for the matrix power series is given by aout[][] = sum_i{al[i]*pl[i][][]} :
 
 			// set initial values for the n entries in al[] and pal[] and the nxn entries in kmats[][] :
-			fT wpf=1.0,wpff; //leading coefficient of power series
+			fT wpf=1.0,twpf=1.0,ttwpf; //leading coefficient of power series and of running sum used for convergence check
 			set_to_zero(kmats);
 			for(i=0; i<n; ++i) {
 				pal[i]=0;
-				al[i]=wpf;
+				rl[i]=wpf;
 				wpf=opf(wpf,i+1); //compute (i+1)-th power series coefficent from the i-th coefficient, using the rule defined by opf()
 
 				k=i/2;
@@ -1139,57 +784,34 @@ public:
 					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
 					wpf*=sfac;
 				}
+				twpf+=wpf;
 			}
 			pal[n-1]=1.0;
 			// set initial values for the entries in kh[][] :
 			set_to_zero(kh);
 			k=(n-1)/2;
-			wpff=opf(wpf,n+1);
-
 			for(i=n-1-k; i<n; ++i) {
-				kh[n-1-i][i]=wpff;
+				kh[n-1-i][i]=1.0;
 			}
 
 
 			// next we iteratively add higher order power series terms to al[] till al[] stops changing
 			// more precisely: the iteration will terminate after nhl_max consecutive iterations have not changed al[]	
-			T ch,cho,tch; // temporary variables for iterating
+			T cho; // temporary variables for iterating
 			int nhl=0; // counts the number of consecutive non-changing iterations  
-			int nch; // counts the number of unchanged al[] coefficients in the curret iteration 
 			fT s,rs=1.0; // used for normalizing the pal[]
 			for(j=n; j<mmax; ++j) {
-				nch=0;
-				ch=-pal[n-1]*crpl[0];
-				cho=pal[0];
-				pal[0]=ch;
-				s=std::norm(ch);
-				tch=al[0];
-				al[0]+=wpf*ch;
-				if(tch==al[0]) {
-					++nch;
+				s=0;
+				cho=pal[n-1]*rs;
+				for(i=n-1; i>0; --i) {
+					pal[i]=pal[i-1]*rs-cho*crpl[i];
+					s+=std::norm(pal[i]);
+					rl[i]+=wpf*pal[i];
 				}
-				for(i=1; i<n; ++i) {
-					ch=cho-pal[n-1]*crpl[i];
-					cho=pal[i];
-					pal[i]=ch;
-					s+=std::norm(ch);
-					tch=al[i];
-					al[i]+=wpf*ch;
-					if(tch==al[i]) {
-						++nch;
-					}
-				}
-				if(nch>=n) {
-					// no al[] coefficient has changed during current iteration
-					++nhl;
-					if(nhl>=nhl_max) {
-						//terminate iteration
-						break;
-					}
-				} else {
-					// at least one al[] coefficent has changed during current iteration
-					nhl=0;
-				}
+				pal[0]=-cho*crpl[0];
+				s+=std::norm(pal[0]);
+				rl[0]+=wpf*pal[0];
+
 				wpf=opf(wpf,j+1); //compute (i+1)-th power series coefficent from i-th coefficient, using the rule defined by opf()
 
 				if(s>1.0) {
@@ -1201,35 +823,182 @@ public:
 					rs=1.0;
 				}
 
-				for(i=0; i<n; ++i) {
-					pal[i]*=rs;
-					kho[i]=wpf*pal[i];
+				for(i=n-1; i>=0; --i) {
+					cho=kh[i][n-1]*rs;
+					for(k=n-1; k>i; --k) {
+						kh[i][k]=kh[i][k-1]*rs-cho*crpl[k];
+						kmats[i][k]+=wpf*kh[i][k];
+					}
+					if(i>0) {
+						kh[i][i]=kh[i-1][i]*rs-cho*crpl[i];
+					} else {
+						kh[0][0]=pal[0]*rs-cho*crpl[0];
+					}
+					kmats[i][i]+=wpf*kh[i][i];
 				}
 
-				wpff=opf(wpf,j+2)/wpf;
 				if(rescale>0) {
 					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
 					wpf*=sfac;
-					wpff*=sfac;
 				}
-				for(i=0; i<n; ++i) {
-					for(k=i; k<n; ++k) {
-						ch=kho[k]-kh[k][n-1]*crpl[i];
-						kho[k]=kh[i][k];
-						kh[i][k]=ch*wpff;
-						kmats[i][k]+=ch;
+
+				ttwpf=twpf;
+				twpf+=wpf;
+				if(ttwpf==twpf) {
+					++nhl;
+					if(nhl>=nhl_max) {
+						//terminate iteration
+						break;
 					}
+				} else {
+					nhl=0;
 				}
 
 			}
 
+		}
+	}
 
-			// form output matrix by summing the 0-th to (n-1)-th matrix powers pl[] with corresponding weights al[] 
-			set_to_identity_scaled(al[0],aout);
-			for(j=1; j<n; ++j) {
-				matrix_add_scaled(pl[j],al[j],aout);
+	void get_r_dr(T** ain,T* rout,T*** drout,fT rescale=0) {
+		// applies the power series defined by opf() to the matrix ain[][], using the Cayley-Hamilton recursion, 
+		// and writes the Cayley-Hamilton coefficients to rout[]; computes also the derivatives of the rout[]
+		// with respect to the components of ain[][] and writes the resulting matrices to drout[][][] :
+		if(n>0) {
+			T* rl=rout;
+			// use unused entries of pl[] as storage for computation of differentaial components:
+			T** kmats=pl[0];
+			T** kh=pl[n];
+
+			int i,j,k;
+			fT sfac=1.0; //scaling factor
+			// compute the 0-th to n-th matrix powers of ta[][] :
+			//   the i-th matrix power of ta[][] is stored in pl[i][][]
+			//   the trace of the i-th matrix power of ta[][] is stored in trpl[i]
+			trpl[0]=n;
+			if(rescale>0) {
+				// if matrix rescaling is used, set sfac to be the magnitude of the largest element of ain[][]
+				// and initiate the computation of the matrix powers from ain[][]/sfac instead of ain[][]:
+				// (note that since we compute also the matrix powers pl[] from the rescaled matrix,
+				// the Cayley-Hamilton coefficient a_{k,j}, with k=0,1,...,\infty; j=0,...,n-1 
+				// will need to be rescaled only by a factor  sfac^{k}, instead of sfac^{k-j})
+				sfac=1.0/rescale;
+				matrix_copy_scaled(ain,rescale,pl[1]);
+			} else {
+				matrix_copy(ain,pl[1]);
+			}
+			get_trace(pl[1],trpl[1]);
+			for(i=2; i<n; ++i) {
+				j=i/2;
+				k=i%2;
+				matrix_mult_nn(pl[j],pl[j+k],pl[i],trpl[i]);
+			}
+			j=n/2;
+			k=n%2;
+			matrix_mult_trace_nn(pl[j],pl[j+k],trpl[n]);
+
+			// compute the characteristic polynomial crpl[] from the traced powers trpl[] :
+			crpl[n]=1;
+			for(j=1; j<=n; ++j) {
+				crpl[n-j]=-trpl[j];
+				for(i=1; i<j; ++i) {
+					crpl[n-j]-=crpl[n-(j-i)]*trpl[i];
+				}
+				crpl[n-j]/=j;
 			}
 
+			// compute iteratively the n coefficients al[] so that the Cayley-Hamilton result
+			// for the matrix power series is given by aout[][] = sum_i{al[i]*pl[i][][]} :
+
+			// set initial values for the n entries in al[] and pal[] and the nxn entries in kmats[][] :
+			fT wpf=1.0,twpf=1.0,ttwpf; //leading coefficient of power series and of running sum used for convergence check
+			set_to_zero(kmats);
+			for(i=0; i<n; ++i) {
+				pal[i]=0;
+				rl[i]=wpf;
+				wpf=opf(wpf,i+1); //compute (i+1)-th power series coefficent from the i-th coefficient, using the rule defined by opf()
+
+				k=i/2;
+				for(j=i-k; j<=i; ++j) {
+					kmats[i-j][j]=wpf;
+				}
+
+				if(rescale>0) {
+					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
+					wpf*=sfac;
+				}
+				twpf+=wpf;
+			}
+			pal[n-1]=1.0;
+			// set initial values for the entries in kh[][] :
+			set_to_zero(kh);
+			k=(n-1)/2;
+			for(i=n-1-k; i<n; ++i) {
+				kh[n-1-i][i]=1.0;
+			}
+
+
+			// next we iteratively add higher order power series terms to al[] till al[] stops changing
+			// more precisely: the iteration will terminate after nhl_max consecutive iterations have not changed al[]	
+			T cho; // temporary variables for iterating
+			int nhl=0; // counts the number of consecutive non-changing iterations  
+			fT s,rs=1.0; // used for normalizing the pal[]
+			for(j=n; j<mmax; ++j) {
+				s=0;
+				cho=pal[n-1]*rs;
+				for(i=n-1; i>0; --i) {
+					pal[i]=pal[i-1]*rs-cho*crpl[i];
+					s+=std::norm(pal[i]);
+					rl[i]+=wpf*pal[i];
+				}
+				pal[0]=-cho*crpl[0];
+				s+=std::norm(pal[0]);
+				rl[0]+=wpf*pal[0];
+
+				wpf=opf(wpf,j+1); //compute (i+1)-th power series coefficent from i-th coefficient, using the rule defined by opf()
+
+				if(s>1.0) {
+					// if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
+					s=std::sqrt(s);
+					wpf*=s;
+					rs=1.0/s;
+				} else {
+					rs=1.0;
+				}
+
+				for(i=n-1; i>=0; --i) {
+					cho=kh[i][n-1]*rs;
+					for(k=n-1; k>i; --k) {
+						kh[i][k]=kh[i][k-1]*rs-cho*crpl[k];
+						kmats[i][k]+=wpf*kh[i][k];
+					}
+					if(i>0) {
+						kh[i][i]=kh[i-1][i]*rs-cho*crpl[i];					
+					} else {
+						kh[0][0]=pal[0]*rs-cho*crpl[0];
+					}
+					kmats[i][i]+=wpf*kh[i][i];
+				}
+
+				if(rescale>0) {
+					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
+					wpf*=sfac;
+				}
+
+				ttwpf=twpf;
+				twpf+=wpf;
+				if(ttwpf==twpf) {
+					++nhl;
+					if(nhl>=nhl_max) {
+						//terminate iteration
+						break;
+					}
+				} else {
+					nhl=0;
+				}
+
+			}
+
+			// compute drout from the kmats[][] matrix :
 			set_to_zero(tmat1);
 			for(i=0; i<n; ++i) {
 				tmat1[i][0]=-kmats[i][n-1];
@@ -1242,18 +1011,24 @@ public:
 				tmat1[0][j]=-cho*crpl[0];
 			}
 
+			//   need to compute the differentials of the characteristic polynomial coefficients:
 			T*** dcrpl;
 			new_matrix_array(dcrpl,n+1);
-			set_to_identity_scaled(-crpl[n],dcrpl[n-1]);
+			// dcrpl[n-1] = -id * crpl[n] (= -id, since crpl[n]=1);
+			set_to_identity_scaled(-1.0,dcrpl[n-1]);
 			for(j=2; j<=n; ++j) {
-				matrix_copy_scaled(pl[j-1],-(fT)j,dcrpl[n-j]);
-				matrix_add(-crpl[n-(j-1)],dcrpl[n-j]);
+				// dcrpl[n-j] = pl[0] * crpl[n-(j-1)] + trpl[1] * dcrpl[n-(j-1)] (= id * crpl[n-(j-1)] + trpl[1] * dcrpl[n-(j-1)]);
+				set_to_identity_scaled(crpl[n-(j-1)],dcrpl[n-j]);
 				matrix_mult_scalar_add(dcrpl[n-(j-1)],trpl[1],dcrpl[n-j]);
 				for(i=2; i<j; ++i) {
-					matrix_mult_scalar_sub(pl[i-1],(fT)i*crpl[n-(j-i)],dcrpl[n-j]);
-					matrix_mult_scalar_sub(dcrpl[n-(j-i)],trpl[i],dcrpl[n-j]);
+					// dcrpl[n-j] += i * pl[i-1] * crpl[n-(j-i)] + trpl[i] * dcrpl[n-(j-i)];
+					matrix_mult_scalar_add(pl[i-1],(fT)i * crpl[n-(j-i)],dcrpl[n-j]);
+					matrix_mult_scalar_add(dcrpl[n-(j-i)],trpl[i],dcrpl[n-j]);
 				}
-				matrix_mult_scalar(dcrpl[n-j],1.0/j,dcrpl[n-j]);
+				// dcrpl[n-j] += j * pl[j-1] * crpl[n]  (+= j *pl[j-1], since crpl[n]=1);
+				matrix_mult_scalar_add(pl[j-1],(fT)j,dcrpl[n-j]);
+				//dcrpl[n-j] /= -j;
+				matrix_mult_scalar(dcrpl[n-j],-1.0/j,dcrpl[n-j]);
 			}
 			
 			for(k=0; k<n; ++k) {
@@ -1264,8 +1039,6 @@ public:
 			}
 
 			delete_matrix_array(dcrpl,n+1);
-
-
 
 		}
 	}
@@ -2018,6 +1791,15 @@ public:
 		tnn=0;
 	}
 
+	void print_matrix(T** ta) {
+		for(int i=0; i<n; ++i) {
+			for(int j=0; j<n; ++j) {
+				std::cout<<ta[i][j]<<" ";
+			}
+			std::cout<<std::endl;
+		}
+	}
+
 private:
 	int n;
 	int mmax;
@@ -2026,7 +1808,6 @@ private:
 	T* trpl;
 	T* crpl;
 	T* pal;
-	T* kho;
 	T* al;
 	T** tmat1;
 	T** tmat2;
