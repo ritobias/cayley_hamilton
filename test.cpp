@@ -19,8 +19,30 @@
 */
 #include<iostream>
 #include<random>
+#include <fstream>
+#include <sstream>
 #include "cayley_hamilton.h"
 #include "sun_algebra.h"
+#include <dirent.h>
+#include <map>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/timeb.h>
+#include <ctime>
+
+int getmcount() {
+    timeb tb;
+    ftime(&tb);
+    int nc=tb.millitm+(tb.time&0xfffff)*1000;
+    return nc;
+}
+
+int getmspan(int nts) {
+    int ns=getmcount()-nts;
+    if(ns<0)
+        ns+=0x100000*1000;
+    return ns;
+}
 
 int main()
 {
@@ -35,7 +57,7 @@ int main()
 
     if(0) {
         //run tests on the sun_algebra class
-        int n=15; // matrix size
+        int n=7; // matrix size
 
         //initialize an instance of the sun_algebra class with matrix size n (i.e. Lie algebra su(n))
         sun_algebra sun(n);
@@ -64,24 +86,14 @@ int main()
         sun.get_alg_mat_ah(v,a);
 
         std::cout<<"a:"<<std::endl;
-        for(int i=0; i<n; ++i) {
-            for(int j=0; j<n; ++j) {
-                std::cout<<a[i][j]<<" ";
-            }
-            std::cout<<std::endl;
-        }
+        sun.ch.print_matrix(a,7);
         std::cout<<std::endl;
 
         // get the group matrix ea=Exp(i*v.T) 
         sun.get_grp_mat(v,ea);
 
         std::cout<<"ea=exp(a):"<<std::endl;
-        for(int i=0; i<n; ++i) {
-            for(int j=0; j<n; ++j) {
-                std::cout<<ea[i][j]<<" ";
-            }
-            std::cout<<std::endl;
-        }
+        sun.ch.print_matrix(ea,7);
         std::cout<<std::endl;
 
         // take the log of ea by determining the vector v in Lie algebra space for which ea=Exp(i*v.T) 
@@ -93,12 +105,7 @@ int main()
         sun.get_alg_mat_ah(v,a);
 
         std::cout<<"lea=log(ea):"<<std::endl;
-        for(int i=0; i<n; ++i) {
-            for(int j=0; j<n; ++j) {
-                std::cout<<a[i][j]<<" ";
-            }
-            std::cout<<std::endl;
-        }
+        sun.ch.print_matrix(a,7);
         std::cout<<std::endl;
 
         // get the group matrix ea=Exp(i*v.T)
@@ -106,12 +113,7 @@ int main()
         sun.get_grp_mat(v,ea);
 
         std::cout<<"ea=exp(lea):"<<std::endl;
-        for(int i=0; i<n; ++i) {
-            for(int j=0; j<n; ++j) {
-                std::cout<<ea[i][j]<<" ";
-            }
-            std::cout<<std::endl;
-        }
+        sun.ch.print_matrix(ea,7);
         std::cout<<std::endl;
 
         //clean up memory used for sun_algebra tests:
@@ -321,7 +323,7 @@ int main()
             ch.delete_matrix_array(dra2,n);
         }
 
-        if(0) {
+        if(1) {
             // allocate memory for the differential matrices
             ctype**** dea=new ctype***[n];
             for(int ic1=0; ic1<n; ++ic1) {
@@ -332,7 +334,7 @@ int main()
             }
 
             // determine the matrix exponential ea[][] of a[][] and the corresponding set differentials dea[i][j][][]=dea[][]/da[i][j]:
-            ch(a,ea,dea);
+            ch(a,ea,dea,0.5);
 
             // allocate more memory to compare the results obtained with and wouthout scaling of the input matrix (should yield the same results):
             ctype** ea2;
@@ -756,5 +758,492 @@ int main()
         ch.delete_matrix(ea);
     }
 
+    if(1) {
+        std::cout<<"test #8:"<<std::endl;
+        int n=3; // matrix size
+
+        //initialize an instance of the sun_algebra class with matrix size n (i.e. Lie algebra su(n))
+        chexp<ftype> ch(n);
+
+        //allocate some matrices using utility functions from the cayley_hamilton sub-class of sun_algebra:
+        ftype** a;
+        ch.new_matrix(a,0);
+        ftype** ea;
+        ch.new_matrix(ea);
+
+        a[0][0]=21.0;
+        a[0][1]=17.0;
+        a[0][2]=6.0;
+        a[1][0]=-5.0;
+        a[1][1]=-1.0;
+        a[1][2]=-6.0;
+        a[2][0]=4.0;
+        a[2][1]=4.0;
+        a[2][2]=16.0;
+
+        // print out the matrix a[][]:
+        std::cout<<"a:"<<std::endl;
+        ch.print_matrix(a,7);
+
+        // determine the matrix exponential ea[][] of a[][]:
+        int niter=ch(a,ea);
+        std::cout<<"ea=exp(a):"<<std::endl;
+        ch.print_matrix_e(ea,7);
+        std::cout<<"niter: "<<niter<<std::endl;
+        std::cout<<std::endl;
+
+        //clean up memory used for cayley_hamilton tests:
+        ch.delete_matrix(a);
+        ch.delete_matrix(ea);
+    }
+
+    if(1) {
+        std::cout<<"test #9:"<<std::endl;
+        int n=4; // matrix size
+
+        //initialize an instance of the sun_algebra class with matrix size n (i.e. Lie algebra su(n))
+        chexp<ftype> ch(n);
+
+        //allocate some matrices using utility functions from the cayley_hamilton sub-class of sun_algebra:
+        ftype** a;
+        ch.new_matrix(a,0);
+        ftype** ea;
+        ch.new_matrix(ea);
+
+        a[0][0]=1.0;
+        a[0][1]=2.0;
+        a[0][2]=2.0;
+        a[0][3]=2.0;
+        a[1][0]=3.0;
+        a[1][1]=1.0;
+        a[1][2]=1.0;
+        a[1][3]=2.0;
+        a[2][0]=3.0;
+        a[2][1]=2.0;
+        a[2][2]=1.0;
+        a[2][3]=2.0;
+        a[3][0]=3.0;
+        a[3][1]=3.0;
+        a[3][2]=3.0;
+        a[3][3]=1.0;
+
+        // print out the matrix a[][]:
+        std::cout<<"a:"<<std::endl;
+        ch.print_matrix(a,7);
+
+        // determine the matrix exponential ea[][] of a[][]:
+        int niter=ch(a,ea);
+        std::cout<<"ea=exp(a):"<<std::endl;
+        ch.print_matrix(ea,7);
+        std::cout<<"niter: "<<niter<<std::endl;
+        std::cout<<std::endl;
+
+        //clean up memory used for cayley_hamilton tests:
+        ch.delete_matrix(a);
+        ch.delete_matrix(ea);
+    }
+
+    if(1) {
+        std::cout<<"test #10:"<<std::endl;
+        int n=3; // matrix size
+
+        //initialize an instance of the sun_algebra class with matrix size n (i.e. Lie algebra su(n))
+        chexp<ftype> ch(n);
+
+        //allocate some matrices using utility functions from the cayley_hamilton sub-class of sun_algebra:
+        ftype** a;
+        ch.new_matrix(a,0);
+        ftype** ea;
+        ch.new_matrix(ea);
+
+        a[0][0]=4.0;
+        a[0][1]=2.0;
+        a[0][2]=0.0;
+        a[1][0]=1.0;
+        a[1][1]=4.0;
+        a[1][2]=1.0;
+        a[2][0]=1.0;
+        a[2][1]=1.0;
+        a[2][2]=4.0;
+
+        // print out the matrix a[][]:
+        std::cout<<"a:"<<std::endl;
+        ch.print_matrix(a,7);
+
+        // determine the matrix exponential ea[][] of a[][]:
+        int niter=ch(a,ea);
+        std::cout<<"ea=exp(a):"<<std::endl;
+        ch.print_matrix(ea,7);
+        std::cout<<"niter: "<<niter<<std::endl;
+        std::cout<<std::endl;
+
+        //clean up memory used for cayley_hamilton tests:
+        ch.delete_matrix(a);
+        ch.delete_matrix(ea);
+    }
+
+    if(1) {
+        std::cout<<"test #11:"<<std::endl;
+        int n=3; // matrix size
+
+        //initialize an instance of the sun_algebra class with matrix size n (i.e. Lie algebra su(n))
+        chexp<ftype> ch(n);
+
+        //allocate some matrices using utility functions from the cayley_hamilton sub-class of sun_algebra:
+        ftype** a;
+        ch.new_matrix(a,0);
+        ftype** ea;
+        ch.new_matrix(ea);
+
+        a[0][0]=29.87942128909879;
+        a[0][1]=0.7815750847907159;
+        a[0][2]=-2.289519314033932;
+        a[1][0]=0.7815750847907159;
+        a[1][1]=25.72656945571064;
+        a[1][2]=8.680737820540137;
+        a[2][0]=-2.289519314033932;
+        a[2][1]=8.680737820540137;
+        a[2][2]=34.39400925519054;
+
+        // print out the matrix a[][]:
+        std::cout<<"a:"<<std::endl;
+        ch.print_matrix(a,7);
+
+        // determine the matrix exponential ea[][] of a[][]:
+        int niter=ch(a,ea);
+        std::cout<<"ea=exp(a):"<<std::endl;
+        ch.print_matrix_e(ea,7);
+        std::cout<<"niter: "<<niter<<std::endl;
+        std::cout<<std::endl;
+
+        //clean up memory used for cayley_hamilton tests:
+        ch.delete_matrix(a);
+        ch.delete_matrix(ea);
+    }
+
+    if(1) {
+        std::cout<<"test #12:"<<std::endl;
+        int n=3; // matrix size
+
+        //initialize an instance of the sun_algebra class with matrix size n (i.e. Lie algebra su(n))
+        chexp<ftype> ch(n);
+
+        //allocate some matrices using utility functions from the cayley_hamilton sub-class of sun_algebra:
+        ftype** a;
+        ch.new_matrix(a,0);
+        ftype** ea;
+        ch.new_matrix(ea);
+
+        a[0][0]=-131.0;
+        a[0][1]=19.0;
+        a[0][2]=18.0;
+        a[1][0]=-390.0;
+        a[1][1]=56.0;
+        a[1][2]=54.0;
+        a[2][0]=-387.0;
+        a[2][1]=57.0;
+        a[2][2]=52.0;
+
+
+        // print out the matrix a[][]:
+        std::cout<<"a:"<<std::endl;
+        ch.print_matrix(a,7);
+
+        // determine the matrix exponential ea[][] of a[][]:
+        int niter=ch(a,ea);
+        std::cout<<"ea=exp(a):"<<std::endl;
+        ch.print_matrix(ea,7);
+        std::cout<<"niter: "<<niter<<std::endl;
+        std::cout<<std::endl;
+
+        //clean up memory used for cayley_hamilton tests:
+        ch.delete_matrix(a);
+        ch.delete_matrix(ea);
+    }
+
+    if(1) {
+        std::cout<<"test #13:"<<std::endl;
+        int n=10; // matrix size
+
+        //initialize an instance of the sun_algebra class with matrix size n (i.e. Lie algebra su(n))
+        chexp<ftype> ch(n);
+
+        //allocate some matrices using utility functions from the cayley_hamilton sub-class of sun_algebra:
+        ftype** a;
+        ch.new_matrix(a,0);
+        ftype** ea;
+        ch.new_matrix(ea);
+
+        for(int i=0; i<n-1; ++i) {
+            a[i][i+1]=1.0;
+        }
+        a[9][0]=1e-10;
+
+
+        // print out the matrix a[][]:
+        std::cout<<"a:"<<std::endl;
+        ch.print_matrix_e(a,7);
+
+        // determine the matrix exponential ea[][] of a[][]:
+        int niter=ch(a,ea);
+        std::cout<<"ea=exp(a):"<<std::endl;
+        ch.print_matrix_e(ea,7);
+        std::cout<<"niter: "<<niter<<std::endl;
+        std::cout<<std::endl;
+
+        //clean up memory used for cayley_hamilton tests:
+        ch.delete_matrix(a);
+        ch.delete_matrix(ea);
+    }
+
+    if(1) {
+        std::cout<<"test #14:"<<std::endl;
+        int n=3; // matrix size
+
+        //initialize an instance of the sun_algebra class with matrix size n (i.e. Lie algebra su(n))
+        chexp<ftype> ch(n);
+
+        //allocate some matrices using utility functions from the cayley_hamilton sub-class of sun_algebra:
+        ftype** a;
+        ch.new_matrix(a,0);
+        ftype** ea;
+        ch.new_matrix(ea);
+
+        a[0][0]=0.0;
+        a[0][1]=1.0e-08;
+        a[0][2]=0.0;
+        a[1][0]=-2.0e+10-2.0e+08/3.0;
+        a[1][1]=-3.0;
+        a[1][2]=2.0e+10;
+        a[2][0]=200.0e+00/3.0;
+        a[2][1]=0.0;
+        a[2][2]=-200.0e+00/3.0;
+
+
+        // print out the matrix a[][]:
+        std::cout<<"a:"<<std::endl;
+        ch.print_matrix_e(a,7);
+
+        // determine the matrix exponential ea[][] of a[][]:
+        int niter=ch(a,ea);
+        std::cout<<"ea=exp(a):"<<std::endl;
+        ch.print_matrix_e(ea,7);
+        std::cout<<"niter: "<<niter<<std::endl;
+        std::cout<<std::endl;
+
+        //clean up memory used for cayley_hamilton tests:
+        ch.delete_matrix(a);
+        ch.delete_matrix(ea);
+    }
+
+    if(1) {
+        std::cout<<std::endl;
+        std::cout<<"========= chexp() ========="<<std::endl;
+        std::string methodename="chexp";
+        std::string dirname="test_matrix_files/a1.5/";
+        std::ostringstream oss;
+        DIR* dir;
+        struct dirent* ent;
+        if((dir=opendir(dirname.c_str()))!=NULL) {
+            std::map<int,std::string> filelist;
+            while((ent=readdir(dir))!=NULL) {
+                if(ent->d_name[0]!='.') {
+                    oss.str("");
+                    oss<<dirname<<ent->d_name;
+                    std::ifstream cfin(oss.str().c_str(),std::ifstream::in|std::ifstream::binary);
+                    int n=0;
+                    int nmat=0;
+                    if(cfin.good()) {
+                        cfin.read(reinterpret_cast<char*>(&(n)),sizeof(int));
+                        cfin.read(reinterpret_cast<char*>(&(nmat)),sizeof(int));
+                        if(n>0) {
+                            filelist[n]=oss.str();
+                        }
+                    }
+                    cfin.close();
+                }
+            }
+            closedir(dir);
+            printf("exp type     SU(N)      av. rerr.    av. niter     av. nb     time\n");
+            for(auto pair=filelist.begin(); pair!=filelist.end(); ++pair) {
+                std::ifstream cfin(pair->second.c_str(),std::ifstream::in|std::ifstream::binary);
+                int n=0;
+                int nmat=0;
+                if(cfin.good()) {
+                    cfin.read(reinterpret_cast<char*>(&n),sizeof(int));
+                    cfin.read(reinterpret_cast<char*>(&nmat),sizeof(int));
+                }
+
+                if(n<2) {
+                    continue;
+                }
+
+                chexp<ctype> mexp(n,(ftype)1.0);
+                ctype*** al;
+                mexp.new_matrix_array(al,nmat);
+                ctype*** earl;
+                mexp.new_matrix_array(earl,nmat);
+                ctype** ea;
+                mexp.new_matrix(ea);
+                ctype** dea;
+                mexp.new_matrix(dea);
+
+                ftype prec=_fprec*n;
+                ftype deanorm,eanorm;
+                ftype avrdeanorm=0.0,avniter=0.0,avnb=0.0;
+
+                int ic1,ic2,niter,nb;
+                std::cout<<FIXED_FLOAT(8);
+                std::complex<double> temp;
+                for(int imat=0; imat<nmat; ++imat) {
+                    for(ic1=0; ic1<n; ++ic1) {
+                        for(ic2=0; ic2<n; ++ic2) {
+                            cfin.read(reinterpret_cast<char*>(&(temp)),sizeof(std::complex<double>));
+                            al[imat][ic1][ic2]=(ctype)temp;
+                        }
+                    }
+                    for(ic1=0; ic1<n; ++ic1) {
+                        for(ic2=0; ic2<n; ++ic2) {
+                            cfin.read(reinterpret_cast<char*>(&(temp)),sizeof(std::complex<double>));
+                            earl[imat][ic1][ic2]=(ctype)temp;
+                        }
+                    }
+                    niter=mexp(al[imat],ea,&nb);
+                    mexp.matrix_sub(ea,earl[imat],dea);
+
+                    mexp.get_frobenius_norm(dea,deanorm);
+                    mexp.get_frobenius_norm(ea,eanorm);
+                    avrdeanorm+=deanorm/eanorm;
+                    avniter+=(ftype)niter;
+                    avnb+=(ftype)nb;
+                }
+                cfin.close();
+
+                avrdeanorm/=nmat;
+                avniter/=nmat;
+                avnb/=nmat;
+
+                int nts=getmcount();
+                for(int i=0; i<100; ++i) {
+                    for(int imat=0; imat<nmat; ++imat) {
+                        niter=mexp(al[imat],ea,&nb);
+                    }
+                }
+                int nte=getmspan(nts);
+                printf(" %-10s  % 3d      %0.5e      %3.3f      %3.3f     %3.3fs\n",methodename.c_str(),n,avrdeanorm,avniter,avnb,(ftype)nte/1000.0);
+
+                mexp.delete_matrix_array(al,nmat);
+                mexp.delete_matrix_array(earl,nmat);
+                mexp.delete_matrix(ea);
+                mexp.delete_matrix(dea);
+            }
+
+        }
+    }
+
+    if(1) {
+        std::cout<<std::endl;
+        std::cout<<"========= nvexp() ========="<<std::endl;
+        std::string methodename="nvexp";
+        std::string dirname="test_matrix_files/a1.5/";
+        std::ostringstream oss;
+        DIR* dir;
+        struct dirent* ent;
+        if((dir=opendir(dirname.c_str()))!=NULL) {
+            std::map<int,std::string> filelist;
+            while((ent=readdir(dir))!=NULL) {
+                if(ent->d_name[0]!='.') {
+                    oss.str("");
+                    oss<<dirname<<ent->d_name;
+                    std::ifstream cfin(oss.str().c_str(),std::ifstream::in|std::ifstream::binary);
+                    int n=0;
+                    int nmat=0;
+                    if(cfin.good()) {
+                        cfin.read(reinterpret_cast<char*>(&(n)),sizeof(int));
+                        cfin.read(reinterpret_cast<char*>(&(nmat)),sizeof(int));
+                        if(n>0) {
+                            filelist[n]=oss.str();
+                        }
+                    }
+                    cfin.close();
+                }
+            }
+            closedir(dir);
+            printf("exp type     SU(N)      av. rerr.    av. niter     av. nb     time\n");
+            for(auto pair=filelist.begin(); pair!=filelist.end(); ++pair) {
+                std::ifstream cfin(pair->second.c_str(),std::ifstream::in|std::ifstream::binary);
+                int n=0;
+                int nmat=0;
+                if(cfin.good()) {
+                    cfin.read(reinterpret_cast<char*>(&n),sizeof(int));
+                    cfin.read(reinterpret_cast<char*>(&nmat),sizeof(int));
+                }
+
+                if(n<2) {
+                    continue;
+                }
+
+                nvexp<ctype> mexp(n,(ftype)1.0);
+                ctype*** al;
+                mexp.new_matrix_array(al,nmat);
+                ctype*** earl;
+                mexp.new_matrix_array(earl,nmat);
+                ctype** ea;
+                mexp.new_matrix(ea);
+                ctype** dea;
+                mexp.new_matrix(dea);
+
+                ftype prec=_fprec*n;
+                ftype deanorm,eanorm;
+                ftype avrdeanorm=0.0,avniter=0.0,avnb=0.0;
+
+                int ic1,ic2,niter,nb;
+                std::cout<<FIXED_FLOAT(8);
+                std::complex<double> temp;
+                for(int imat=0; imat<nmat; ++imat) {
+                    for(ic1=0; ic1<n; ++ic1) {
+                        for(ic2=0; ic2<n; ++ic2) {
+                            cfin.read(reinterpret_cast<char*>(&(temp)),sizeof(std::complex<double>));
+                            al[imat][ic1][ic2]=(ctype)temp;
+                        }
+                    }
+                    for(ic1=0; ic1<n; ++ic1) {
+                        for(ic2=0; ic2<n; ++ic2) {
+                            cfin.read(reinterpret_cast<char*>(&(temp)),sizeof(std::complex<double>));
+                            earl[imat][ic1][ic2]=(ctype)temp;
+                        }
+                    }
+                    niter=mexp(al[imat],ea,&nb);
+                    mexp.matrix_sub(ea,earl[imat],dea);
+
+                    mexp.get_frobenius_norm(dea,deanorm);
+                    mexp.get_frobenius_norm(ea,eanorm);
+                    avrdeanorm+=deanorm/eanorm;
+                    avniter+=(ftype)niter;
+                    avnb+=(ftype)nb;
+                }
+                cfin.close();
+
+                avrdeanorm/=nmat;
+                avniter/=nmat;
+                avnb/=nmat;
+
+                int nts=getmcount();
+                for(int i=0; i<100; ++i) {
+                    for(int imat=0; imat<nmat; ++imat) {
+                        niter=mexp(al[imat],ea,&nb);
+                    }
+                }
+                int nte=getmspan(nts);
+                printf(" %-10s  % 3d      %0.5e      %3.3f      %3.3f     %3.3fs\n",methodename.c_str(),n,avrdeanorm,avniter,avnb,(ftype)nte/1000.0);
+         
+                mexp.delete_matrix_array(al,nmat);
+                mexp.delete_matrix_array(earl,nmat);
+                mexp.delete_matrix(ea);
+                mexp.delete_matrix(dea);
+            }
+
+        }
+    }
 
 }

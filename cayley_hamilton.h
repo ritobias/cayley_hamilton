@@ -25,7 +25,7 @@
 #include<limits>
 #include<cmath>
 #include <iomanip>
-#define FIXED_FLOAT(x) std::fixed <<std::setprecision(x)
+#define FIXED_FLOAT(x) std::fixed<<std::setprecision(x)
 
 typedef double ftype; // float type to be used
 typedef long double lftype; // long version of ftype
@@ -277,7 +277,7 @@ public:
 				for(i=1; i<j; ++i) {
 					crpl[n-j]-=crpl[n-(j-i)]*trpl[i];
 				}
-				crpl[n-j]/=j;
+				crpl[n-j]/=(fT)j;
 			}
 
 			// compute iteratively the n coefficients al[] so that the Cayley-Hamilton result
@@ -316,22 +316,23 @@ public:
 
 				wpf=opf(wpf,j+1); //compute (i+1)-th power series coefficent from i-th coefficient, using the rule defined by opf()
 
-				if(s>1.0) {
-					// if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
-					s=std::sqrt(s);
-					wpf*=s;
-					rs=1.0/s;
-				} else {
-					rs=1.0;
-				}
-
 				if(rescale!=0) {
 					//if matrix rescaling is used, next power series term will need additional factor of sfac compared to current term.
 					wpf*=sfac;
 				}
 
 				ttwpf=twpf;
-				twpf+=wpf;
+				s=std::sqrt(s);
+				if(s>1.0) {
+					// if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
+					wpf*=s;
+					rs=1.0/s;
+					twpf+=wpf;
+				} else {
+					rs=1.0;
+					twpf+=wpf*s;
+				}
+
 				if(ttwpf==twpf) {
 					++nhl;
 					if(nhl>=nhl_max) {
@@ -451,13 +452,16 @@ public:
 
 				wpf=opf(wpf,j+1); //compute (i+1)-th power series coefficent from i-th coefficient, using the rule defined by opf()
 
+				ttwpf=twpf;
+				s=std::sqrt(s);
 				if(s>1.0) {
 					// if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
-					s=std::sqrt(s);
 					wpf*=s;
 					rs=1.0/s;
+					twpf+=wpf*sfac;
 				} else {
 					rs=1.0;
+					twpf+=wpf*s*sfac;
 				}
 
 				// add terms to kmats[][]:
@@ -480,8 +484,6 @@ public:
 					wpf*=sfac;
 				}
 
-				ttwpf=twpf;
-				twpf+=wpf;
 				if(ttwpf==twpf) {
 					++nhl;
 					if(nhl>=nhl_max) {
@@ -631,13 +633,16 @@ public:
 
 				wpf=opf(wpf,j+1); //compute (i+1)-th power series coefficent from i-th coefficient, using the rule defined by opf()
 
+				ttwpf=twpf;
+				s=std::sqrt(s);
 				if(s>1.0) {
 					// if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
-					s=std::sqrt(s);
 					wpf*=s;
 					rs=1.0/s;
+					twpf+=wpf*sfac;
 				} else {
 					rs=1.0;
+					twpf+=wpf*s*sfac;
 				}
 
 				// add terms to kmats[][]:
@@ -660,8 +665,6 @@ public:
 					wpf*=sfac;
 				}
 
-				ttwpf=twpf;
-				twpf+=wpf;
 				if(ttwpf==twpf) {
 					++nhl;
 					if(nhl>=nhl_max) {
@@ -829,13 +832,16 @@ public:
 
 				wpf=opf(wpf,j+1); //compute (i+1)-th power series coefficent from i-th coefficient, using the rule defined by opf()
 
+				ttwpf=twpf;
+				s=std::sqrt(s);
 				if(s>1.0) {
 					// if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
-					s=std::sqrt(s);
 					wpf*=s;
 					rs=1.0/s;
+					twpf+=wpf*sfac;
 				} else {
 					rs=1.0;
+					twpf+=wpf*s*sfac;
 				}
 
 				// add terms to kmats[][]:
@@ -858,8 +864,6 @@ public:
 					wpf*=sfac;
 				}
 
-				ttwpf=twpf;
-				twpf+=wpf;
 				if(ttwpf==twpf) {
 					++nhl;
 					if(nhl>=nhl_max) {
@@ -972,13 +976,16 @@ public:
 
 				wpf=opf(wpf,j+1); //compute (i+1)-th power series coefficent from i-th coefficient, using the rule defined by opf()
 
+				ttwpf=twpf;
+				s=std::sqrt(s);
 				if(s>1.0) {
 					// if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
-					s=std::sqrt(s);
 					wpf*=s;
 					rs=1.0/s;
+					twpf+=wpf*sfac;
 				} else {
 					rs=1.0;
+					twpf+=wpf*s*sfac;
 				}
 
 				// add terms to kmats[][]:
@@ -1001,8 +1008,6 @@ public:
 					wpf*=sfac;
 				}
 
-				ttwpf=twpf;
-				twpf+=wpf;
 				if(ttwpf==twpf) {
 					++nhl;
 					if(nhl>=nhl_max) {
@@ -1172,6 +1177,22 @@ public:
 		}
 	}
 
+	void matrix_add(T** lin1,T** lin2,T** lout) {
+		// set lout[][] = lin1[][] + lin2[][] 
+		int ic1,ic2;
+		T* lin10;
+		T* lin20;
+		T* lout0;
+		for(ic1=0; ic1<n; ++ic1) {
+			lout0=lout[ic1];
+			lin10=lin1[ic1];
+			lin20=lin2[ic1];
+			for(ic2=0; ic2<n; ++ic2) {
+				lout0[ic2]=lin10[ic2]+lin20[ic2];
+			}
+		}
+	}
+
 	void matrix_add(T** lin1,T** lout, T& trout) {
 		// add lin1[][] to lout[][] and set trout=trace(lout[][])
 		int ic1,ic2;
@@ -1198,6 +1219,22 @@ public:
 			lin10=lin1[ic1];
 			for(ic2=0; ic2<n; ++ic2) {
 				lout0[ic2]-=lin10[ic2];
+			}
+		}
+	}
+
+	void matrix_sub(T** lin1,T** lin2,T** lout) {
+		// set lout[][] = lin1[][] - lin2[][] 
+		int ic1,ic2;
+		T* lin10;
+		T* lin20;
+		T* lout0;
+		for(ic1=0; ic1<n; ++ic1) {
+			lout0=lout[ic1];
+			lin10=lin1[ic1];
+			lin20=lin2[ic1];
+			for(ic2=0; ic2<n; ++ic2) {
+				lout0[ic2]=lin10[ic2]-lin20[ic2];
 			}
 		}
 	}
@@ -1437,7 +1474,7 @@ public:
 			lout0=lout[ic1];
 			lin10=lin1[ic1];
 			for(ic2=0; ic2<n; ++ic2) {
-				lout0[ic2]=lin10[ic2]*scalef;
+				lout0[ic2]=lin10[ic2]*(T)scalef;
 			}
 		}
 	}
@@ -1732,6 +1769,50 @@ public:
 		rout=std::sqrt(rout);
 	}
 
+	void get_one_norm(T** lin1,fT& rout) {
+		// set rout=frobenius_norm(lin1[][])
+		rout=0;
+		int ic1,ic2;
+		for(ic1=0; ic1<n; ++ic1) {
+			for(ic2=0; ic2<n; ++ic2) {
+				rout+=std::abs(lin1[ic1][ic2]);
+			}
+		}
+		rout=std::sqrt(rout);
+	}
+
+	void get_l1_norm(T** lin1,fT& rout) {
+		// set rout=l1_norm(lin1[][])
+		rout=0;
+		int ic1,ic2;
+		fT cols;
+		for(ic2=0; ic2<n; ++ic2) {
+			cols=0;
+			for(ic1=0; ic1<n; ++ic1) {
+				cols+=std::abs(lin1[ic1][ic2]);
+			}
+			if(cols>rout) {
+				rout=cols;
+			}
+		}
+	}
+
+	void get_li_norm(T** lin1,fT& rout) {
+		// set rout=li_norm(lin1[][])
+		rout=0;
+		int ic1,ic2;
+		fT rows;
+		for(ic1=0; ic1<n; ++ic1) {
+			rows=0;
+			for(ic2=0; ic2<n; ++ic2) {
+				rows+=std::abs(lin1[ic1][ic2]);
+			}
+			if(rows>rout) {
+				rout=rows;
+			}
+		}
+	}
+
 	void new_matrix(T**& ta,int init=-1) {
 		// allocate memory for a nxn matrix and set ta to point to it
 		ta=new T*[n];
@@ -1809,10 +1890,22 @@ public:
 	}
 
 	void print_matrix(T** ta, int dprec=6) {
+		int totw=dprec+6;
+		std::cout<<FIXED_FLOAT(dprec);
+		
+		for(int i=0; i<n; ++i) {
+			for(int j=0; j<n; ++j) {
+				std::cout.width(totw); std::cout<<ta[i][j]<<" ";
+			}
+			std::cout<<std::endl;
+		}
+	}
+
+	void print_matrix_e(T** ta,int dprec=6) {
 		std::cout<<FIXED_FLOAT(dprec);
 		for(int i=0; i<n; ++i) {
 			for(int j=0; j<n; ++j) {
-				std::cout<<ta[i][j]<<" ";
+				printf("% 0.*e ",dprec,ta[i][j]);
 			}
 			std::cout<<std::endl;
 		}
@@ -1836,8 +1929,8 @@ private:
 template<class T>
 class chexp : public cayley_hamilton<T> {
 public:
-	using cayley_hamilton<T>::fT; // underlying floating point type of type T
-	using cayley_hamilton<T>::lT; // longer bit representation of type T (if defined) or type T itself
+	using fT=typename cayley_hamilton<T>::fT; // underlying floating point type of type T
+	using lT=typename cayley_hamilton<T>::lT; // longer bit representation of type T (if defined) or type T itself
 	using cayley_hamilton<T>::n;
 	using cayley_hamilton<T>::mmax;
 	using cayley_hamilton<T>::nhl_max;
@@ -1875,21 +1968,25 @@ public:
 	using cayley_hamilton<T>::matrix_mult_an_sub;
 	using cayley_hamilton<T>::get_trace;
 	using cayley_hamilton<T>::get_frobenius_norm;
+	using cayley_hamilton<T>::get_one_norm;
+	using cayley_hamilton<T>::get_l1_norm;
+	using cayley_hamilton<T>::get_li_norm;
 	using cayley_hamilton<T>::new_matrix;
 	using cayley_hamilton<T>::delete_matrix;
 	using cayley_hamilton<T>::new_matrix_array;
 	using cayley_hamilton<T>::delete_matrix_array;
 	using cayley_hamilton<T>::print_matrix;
+	fT scalesquarelim;
 
 	chexp() : cayley_hamilton<T>() {
 
 	}
 
-	chexp(int tn) : cayley_hamilton<T>(tn) {
+	chexp(int tn,fT sslim=1.0): cayley_hamilton<T>(tn),scalesquarelim(sslim) {
 
 	}
 
-	int operator()(T** ain,T** aout) {
+	int operator()(T** ain,T** aout,int* onb=0) {
 		// computes the matrix exponential of ain[][], using the Cayley-Hamilton recursion in combination with "scale and square", 
 		// and writes the result to aout[][]
 		int niter=0;
@@ -1900,9 +1997,13 @@ public:
 			// determine nb for scaling factor 2^{-nb} of matrix ain[][] s.t. frobenius_norm(ain[][])*2^{-nb} \in (1.0,2.0) :
 			fT anorm,sfac=1.0;
 			get_frobenius_norm(ain,anorm);
-			while(anorm*sfac>=2.0) {
+			while(anorm*sfac>=scalesquarelim) {
 				sfac*=0.5;
 				++nb;
+			}
+
+			if(onb!=0) {
+				*onb=nb;
 			}
 
 			//std::cout<<"nb="<<nb<<std::endl;
@@ -1962,18 +2063,18 @@ public:
 
 				wpf/=(fT)(j+1); //compute (j+1)-th power series coefficent from j-th coefficient
 
-
+				ttwpf=twpf;
+				s=std::sqrt(s);
 				if(s>1.0) {
 					// if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
-					s=std::sqrt(s);
 					wpf*=s;
 					rs=1.0/s;
+					twpf+=wpf;
 				} else {
 					rs=1.0;
+					twpf+=wpf*s;
 				}
 
-				ttwpf=twpf;
-				twpf+=wpf;
 				if(ttwpf==twpf) {
 					++nhl;
 					if(nhl>=nhl_max) {
@@ -2032,7 +2133,7 @@ public:
 			// determine nb for scaling factor 2^{-nb} of matrix ain[][] s.t. frobenius_norm(ain[][])*2^{-nb} \in (1.0,2.0) :
 			fT anorm,sfac=1.0;
 			get_frobenius_norm(ain,anorm);
-			while(anorm*sfac>=2.0) {
+			while(anorm*sfac>=scalesquarelim) {
 				sfac*=0.5;
 				++nb;
 			}
@@ -2108,13 +2209,16 @@ public:
 
 				wpf/=(fT)(j+1); //compute (j+1)-th power series coefficent from j-th coefficient
 
+				ttwpf=twpf;
+				s=std::sqrt(s);
 				if(s>1.0) {
 					// if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
-					s=std::sqrt(s);
 					wpf*=s;
 					rs=1.0/s;
+					twpf+=wpf;
 				} else {
 					rs=1.0;
+					twpf+=wpf*s;
 				}
 
 				// add terms to kmats[][]:
@@ -2132,8 +2236,6 @@ public:
 					kmats[i][i]+=wpf*kh[i][i];
 				}
 
-				ttwpf=twpf;
-				twpf+=wpf;
 				if(ttwpf==twpf) {
 					++nhl;
 					if(nhl>=nhl_max) {
@@ -2153,11 +2255,11 @@ public:
 				cho=al[0];
 				for(i=0; i<n; ++i) {
 					kal[i]=pal[i]=al[i];
-					kh[i][i]=0.5*kmats[i][i];
-					kmats[i][i]=2.0*kh[0][i]*al[i];
+					kh[i][i]=(fT)0.5*kmats[i][i];
+					kmats[i][i]=(fT)2.0*kh[0][i]*al[i];
 					for(j=i+1; j<n; ++j) {
-						kh[i][j]=0.5*kmats[i][j];
-						kh[j][i]=0.5*kmats[i][j];
+						kh[i][j]=(fT)0.5*kmats[i][j];
+						kh[j][i]=(fT)0.5*kmats[i][j];
 						kmats[i][j]=kh[0][i]*al[j]+kh[0][j]*al[i];
 					}
 					al[i]*=cho;
@@ -2233,7 +2335,7 @@ public:
 			// determine nb for scaling factor 2^{-nb} of matrix ain[][] s.t. frobenius_norm(ain[][])*2^{-nb} \in (1.0,2.0) :
 			fT anorm,sfac=1.0;
 			get_frobenius_norm(ain,anorm);
-			while(anorm*sfac>=2.0) {
+			while(anorm*sfac>=scalesquarelim) {
 				sfac*=0.5;
 				++nb;
 			}
@@ -2310,13 +2412,16 @@ public:
 
 				wpf/=(fT)(j+1); //compute (j+1)-th power series coefficent from j-th coefficient
 
+				ttwpf=twpf;
+				s=std::sqrt(s);
 				if(s>1.0) {
 					// if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
-					s=std::sqrt(s);
 					wpf*=s;
 					rs=1.0/s;
+					twpf+=wpf;
 				} else {
 					rs=1.0;
+					twpf+=wpf*s;
 				}
 
 				// add terms to kmats[][]:
@@ -2334,8 +2439,6 @@ public:
 					kmats[i][i]+=wpf*kh[i][i];
 				}
 
-				ttwpf=twpf;
-				twpf+=wpf;
 				if(ttwpf==twpf) {
 					++nhl;
 					if(nhl>=nhl_max) {
@@ -2355,11 +2458,11 @@ public:
 				cho=al[0];
 				for(i=0; i<n; ++i) {
 					kal[i]=pal[i]=al[i];
-					kh[i][i]=0.5*kmats[i][i];
-					kmats[i][i]=2.0*kh[0][i]*al[i];
+					kh[i][i]=(fT)0.5*kmats[i][i];
+					kmats[i][i]=(fT)2.0*kh[0][i]*al[i];
 					for(j=i+1; j<n; ++j) {
-						kh[i][j]=0.5*kmats[i][j];
-						kh[j][i]=0.5*kmats[i][j];
+						kh[i][j]=(fT)0.5*kmats[i][j];
+						kh[j][i]=(fT)0.5*kmats[i][j];
 						kmats[i][j]=kh[0][i]*al[j]+kh[0][j]*al[i];
 					}
 					al[i]*=cho;
@@ -2454,7 +2557,7 @@ public:
 			// determine nb for scaling factor 2^{-nb} of matrix ain[][] s.t. frobenius_norm(ain[][])*2^{-nb} \in (1.0,2.0) :
 			fT anorm,sfac=1.0;
 			get_frobenius_norm(ain,anorm);
-			while(anorm*sfac>=2.0) {
+			while(anorm*sfac>=scalesquarelim) {
 				sfac*=0.5;
 				++nb;
 			}
@@ -2531,13 +2634,16 @@ public:
 
 				wpf/=(fT)(j+1); //compute (j+1)-th power series coefficent from j-th coefficient
 
+				ttwpf=twpf;
+				s=std::sqrt(s);
 				if(s>1.0) {
 					// if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
-					s=std::sqrt(s);
 					wpf*=s;
 					rs=1.0/s;
+					twpf+=wpf;
 				} else {
 					rs=1.0;
+					twpf+=wpf*s;
 				}
 
 				// add terms to kmats[][]:
@@ -2555,8 +2661,6 @@ public:
 					kmats[i][i]+=wpf*kh[i][i];
 				}
 
-				ttwpf=twpf;
-				twpf+=wpf;
 				if(ttwpf==twpf) {
 					++nhl;
 					if(nhl>=nhl_max) {
@@ -2576,11 +2680,11 @@ public:
 				cho=rl[0];
 				for(i=0; i<n; ++i) {
 					kal[i]=pal[i]=rl[i];
-					kh[i][i]=0.5*kmats[i][i];
-					kmats[i][i]=2.0*kh[0][i]*rl[i];
+					kh[i][i]=(fT)0.5*kmats[i][i];
+					kmats[i][i]=(fT)2.0*kh[0][i]*rl[i];
 					for(j=i+1; j<n; ++j) {
-						kh[i][j]=0.5*kmats[i][j];
-						kh[j][i]=0.5*kmats[i][j];
+						kh[i][j]=(fT)0.5*kmats[i][j];
+						kh[j][i]=(fT)0.5*kmats[i][j];
 						kmats[i][j]=kh[0][i]*rl[j]+kh[0][j]*rl[i];
 					}
 					rl[i]*=cho;
@@ -2642,7 +2746,7 @@ public:
 			// determine nb for scaling factor 2^{-nb} of matrix ain[][] s.t. frobenius_norm(ain[][])*2^{-nb} \in (1.0,2.0) :
 			fT anorm,sfac=1.0;
 			get_frobenius_norm(ain,anorm);
-			while(anorm*sfac>=2.0) {
+			while(anorm*sfac>=scalesquarelim) {
 				sfac*=0.5;
 				++nb;
 			}
@@ -2719,13 +2823,16 @@ public:
 
 				wpf/=(fT)(j+1); //compute (j+1)-th power series coefficent from j-th coefficient
 
+				ttwpf=twpf;
+				s=std::sqrt(s);
 				if(s>1.0) {
 					// if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
-					s=std::sqrt(s);
 					wpf*=s;
 					rs=1.0/s;
+					twpf+=wpf;
 				} else {
 					rs=1.0;
+					twpf+=wpf*s;
 				}
 
 				// add terms to kmats[][]:
@@ -2743,8 +2850,6 @@ public:
 					kmats[i][i]+=wpf*kh[i][i];
 				}
 
-				ttwpf=twpf;
-				twpf+=wpf;
 				if(ttwpf==twpf) {
 					++nhl;
 					if(nhl>=nhl_max) {
@@ -2764,11 +2869,11 @@ public:
 				cho=rl[0];
 				for(i=0; i<n; ++i) {
 					kal[i]=pal[i]=rl[i];
-					kh[i][i]=0.5*kmats[i][i];
-					kmats[i][i]=2.0*kh[0][i]*rl[i];
+					kh[i][i]=(fT)0.5*kmats[i][i];
+					kmats[i][i]=(fT)2.0*kh[0][i]*rl[i];
 					for(j=i+1; j<n; ++j) {
-						kh[i][j]=0.5*kmats[i][j];
-						kh[j][i]=0.5*kmats[i][j];
+						kh[i][j]=(fT)0.5*kmats[i][j];
+						kh[j][i]=(fT)0.5*kmats[i][j];
 						kmats[i][j]=kh[0][i]*rl[j]+kh[0][j]*rl[i];
 					}
 					rl[i]*=cho;
@@ -2831,6 +2936,126 @@ public:
 					matrix_mult_scalar(drout[i],s,drout[i]);
 					s*=sfac;
 				}
+			}
+
+		}
+		return niter;
+	}
+
+};
+
+template<class T>
+class nvexp: public cayley_hamilton<T> {
+public:
+	using fT=typename cayley_hamilton<T>::fT; // underlying floating point type of type T
+	using lT=typename cayley_hamilton<T>::lT; // longer bit representation of type T (if defined) or type T itself
+	using cayley_hamilton<T>::n;
+	using cayley_hamilton<T>::mmax;
+	using cayley_hamilton<T>::nhl_max;
+	using cayley_hamilton<T>::pl;
+	using cayley_hamilton<T>::trpl;
+	using cayley_hamilton<T>::crpl;
+	using cayley_hamilton<T>::pal;
+	using cayley_hamilton<T>::al;
+	using cayley_hamilton<T>::tmat1;
+	using cayley_hamilton<T>::tmat2;
+	using cayley_hamilton<T>::set_n;
+	using cayley_hamilton<T>::set_to_zero;
+	using cayley_hamilton<T>::set_to_identity;
+	using cayley_hamilton<T>::set_to_identity_scaled;
+	using cayley_hamilton<T>::matrix_copy;
+	using cayley_hamilton<T>::matrix_copy_scaled;
+	using cayley_hamilton<T>::matrix_add;
+	using cayley_hamilton<T>::matrix_sub;
+	using cayley_hamilton<T>::matrix_add_scaled;
+	using cayley_hamilton<T>::matrix_mult_trace_nn;
+	using cayley_hamilton<T>::matrix_mult_trace_na;
+	using cayley_hamilton<T>::matrix_mult_trace_an;
+	using cayley_hamilton<T>::matrix_mult_trace_aa;
+	using cayley_hamilton<T>::matrix_mult_nn;
+	using cayley_hamilton<T>::matrix_mult_na;
+	using cayley_hamilton<T>::matrix_mult_an;
+	using cayley_hamilton<T>::matrix_mult_scalar;
+	using cayley_hamilton<T>::matrix_mult_scalar_add;
+	using cayley_hamilton<T>::matrix_mult_scalar_sub;
+	using cayley_hamilton<T>::matrix_mult_nn_add;
+	using cayley_hamilton<T>::matrix_mult_na_add;
+	using cayley_hamilton<T>::matrix_mult_an_add;
+	using cayley_hamilton<T>::matrix_mult_nn_sub;
+	using cayley_hamilton<T>::matrix_mult_na_sub;
+	using cayley_hamilton<T>::matrix_mult_an_sub;
+	using cayley_hamilton<T>::get_trace;
+	using cayley_hamilton<T>::get_frobenius_norm;
+	using cayley_hamilton<T>::get_one_norm;
+	using cayley_hamilton<T>::get_l1_norm;
+	using cayley_hamilton<T>::get_li_norm;
+	using cayley_hamilton<T>::new_matrix;
+	using cayley_hamilton<T>::delete_matrix;
+	using cayley_hamilton<T>::new_matrix_array;
+	using cayley_hamilton<T>::delete_matrix_array;
+	using cayley_hamilton<T>::print_matrix;
+	fT scalesquarelim;
+
+	nvexp(): cayley_hamilton<T>() {
+
+	}
+
+	nvexp(int tn, fT sslim=1.0): cayley_hamilton<T>(tn),scalesquarelim(sslim) {
+
+	}
+
+	int operator()(T** ain,T** aout,int* onb=0) {
+		// computes the matrix exponential of ain[][], using the Cayley-Hamilton recursion in combination with "scale and square", 
+		// and writes the result to aout[][]
+		int niter=0;
+		int nb=0;
+		if(n>0) {
+			int j,k;
+
+			// determine nb for scaling factor 2^{-nb} of matrix ain[][] s.t. frobenius_norm(ain[][])*2^{-nb} \in (1.0,2.0) :
+			fT anorm,sfac=1.0;
+			get_frobenius_norm(ain,anorm);
+			while(anorm*sfac>=scalesquarelim) {
+				sfac*=0.5;
+				++nb;
+			}
+
+			if(onb!=0) {
+				*onb=nb;
+			}
+
+			//std::cout<<"nb="<<nb<<std::endl;
+
+			matrix_copy_scaled(ain,sfac,tmat1);
+			matrix_copy(tmat1,pl[0]);
+			set_to_identity(aout);
+			matrix_add(pl[0],aout);
+			int nhl=0; // counts the number of consecutive non-changing iterations  
+			fT ttwpf,twpf;
+			get_frobenius_norm(aout,twpf);
+			for(j=2; j<mmax; ++j) {
+				matrix_mult_nn(tmat1,pl[0],pl[1]);
+				matrix_mult_scalar(pl[1],(fT)1.0/(fT)j,pl[0]);
+				matrix_add(pl[0],aout);
+				ttwpf=twpf;
+				get_frobenius_norm(aout,twpf);
+				if(ttwpf==twpf) {
+					++nhl;
+					if(nhl>=nhl_max) {
+						//terminate iteration
+						break;
+					}
+				} else {
+					nhl=0;
+				}
+			}
+			niter=j;
+
+			// take nb times the square of the result:
+			T* kal=trpl;
+			for(k=0; k<nb; ++k) {
+				matrix_mult_nn(aout,aout,pl[0]);
+				matrix_copy(pl[0],aout);
 			}
 
 		}

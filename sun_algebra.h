@@ -410,7 +410,7 @@ public:
 	int n;
 	int ngen;
 	sparse_mat<ctype>* generator;
-	cayley_hamilton<ctype> ch;
+	chexp<ctype> ch;
 	ctype** tmat;
 	ctype** tmat2;
 	ftype* tvec;

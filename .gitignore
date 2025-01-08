@@ -9,6 +9,8 @@
 *.user
 *.userosscache
 *.sln.docstates
+*test_matrix_files
+*external
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
