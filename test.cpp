@@ -29,6 +29,8 @@
 #include <sys/types.h>
 #include <sys/timeb.h>
 #include <ctime>
+#include <deque>
+#include <algorithm>
 
 int getmcount() {
     timeb tb;
@@ -74,12 +76,12 @@ int main()
         ftype* v=new ftype[sun.ngen];
         ftype vnorm=0;
         for(int i=0; i<sun.ngen; ++i) {
-            v[i]=1.0-2.0*dis(rng);
+            v[i]=(ftype)(1.0-2.0*dis(rng));
             vnorm+=v[i]*v[i];
         }
         vnorm=std::sqrt(vnorm);
         for(int i=0; i<sun.ngen; ++i) {
-            v[i]*=2.0*alpha/vnorm;
+            v[i]*=(ftype)2.0*alpha/vnorm;
         }
 
         // get the anit-hermitian matrix representation of "v": a=i*v.T ,  where T={lambda_0 / 2, ..., lambda_ngen / 2}
@@ -514,7 +516,7 @@ int main()
     }
 
     //run tests on the cayley_hamilton class
-    if(1) {
+    if(0) {
         std::cout<<"test #1:"<<std::endl;
         int n=2; // matrix size
 
@@ -546,7 +548,7 @@ int main()
         ch.delete_matrix(ea);
     }
 
-    if(1) {
+    if(0) {
         std::cout<<"test #2:"<<std::endl;
         int n=2; // matrix size
 
@@ -581,7 +583,7 @@ int main()
         ch.delete_matrix(ea);
     }
 
-    if(1) {
+    if(0) {
         std::cout<<"test #3:"<<std::endl;
         int n=2; // matrix size
 
@@ -621,7 +623,7 @@ int main()
         ch.delete_matrix(ea);
     }
 
-    if(1) {
+    if(0) {
         std::cout<<"test #4:"<<std::endl;
         int n=2; // matrix size
 
@@ -656,7 +658,7 @@ int main()
         ch.delete_matrix(ea);
     }
 
-    if(1) {
+    if(0) {
         std::cout<<"test #5:"<<std::endl;
         int n=4; // matrix size
 
@@ -690,7 +692,7 @@ int main()
         ch.delete_matrix(ea);
     }
 
-    if(1) {
+    if(0) {
         std::cout<<"test #6:"<<std::endl;
         int n=2; // matrix size
 
@@ -724,7 +726,7 @@ int main()
         ch.delete_matrix(ea);
     }
 
-    if(1) {
+    if(0) {
         std::cout<<"test #7:"<<std::endl;
         int n=2; // matrix size
 
@@ -758,7 +760,7 @@ int main()
         ch.delete_matrix(ea);
     }
 
-    if(1) {
+    if(0) {
         std::cout<<"test #8:"<<std::endl;
         int n=3; // matrix size
 
@@ -797,7 +799,7 @@ int main()
         ch.delete_matrix(ea);
     }
 
-    if(1) {
+    if(0) {
         std::cout<<"test #9:"<<std::endl;
         int n=4; // matrix size
 
@@ -843,7 +845,7 @@ int main()
         ch.delete_matrix(ea);
     }
 
-    if(1) {
+    if(0) {
         std::cout<<"test #10:"<<std::endl;
         int n=3; // matrix size
 
@@ -882,7 +884,7 @@ int main()
         ch.delete_matrix(ea);
     }
 
-    if(1) {
+    if(0) {
         std::cout<<"test #11:"<<std::endl;
         int n=3; // matrix size
 
@@ -921,7 +923,7 @@ int main()
         ch.delete_matrix(ea);
     }
 
-    if(1) {
+    if(0) {
         std::cout<<"test #12:"<<std::endl;
         int n=3; // matrix size
 
@@ -961,7 +963,7 @@ int main()
         ch.delete_matrix(ea);
     }
 
-    if(1) {
+    if(0) {
         std::cout<<"test #13:"<<std::endl;
         int n=10; // matrix size
 
@@ -996,7 +998,7 @@ int main()
         ch.delete_matrix(ea);
     }
 
-    if(1) {
+    if(0) {
         std::cout<<"test #14:"<<std::endl;
         int n=3; // matrix size
 
@@ -1037,213 +1039,378 @@ int main()
     }
 
     if(1) {
-        std::cout<<std::endl;
-        std::cout<<"========= chexp() ========="<<std::endl;
-        std::string methodename="chexp";
-        std::string dirname="test_matrix_files/a1.5/";
-        std::ostringstream oss;
-        DIR* dir;
-        struct dirent* ent;
-        if((dir=opendir(dirname.c_str()))!=NULL) {
-            std::map<int,std::string> filelist;
-            while((ent=readdir(dir))!=NULL) {
-                if(ent->d_name[0]!='.') {
-                    oss.str("");
-                    oss<<dirname<<ent->d_name;
-                    std::ifstream cfin(oss.str().c_str(),std::ifstream::in|std::ifstream::binary);
-                    int n=0;
-                    int nmat=0;
-                    if(cfin.good()) {
-                        cfin.read(reinterpret_cast<char*>(&(n)),sizeof(int));
-                        cfin.read(reinterpret_cast<char*>(&(nmat)),sizeof(int));
-                        if(n>0) {
-                            filelist[n]=oss.str();
+        std::deque<std::string> dirnamel;
+        dirnamel.push_back("test_matrix_files/sun_r0_1pi/");
+        dirnamel.push_back("test_matrix_files/sun_r0_2pi/");
+        dirnamel.push_back("test_matrix_files/sun_r0_5pi/");
+        dirnamel.push_back("test_matrix_files/sun_r0_10pi/");
+        dirnamel.push_back("test_matrix_files/sun_r0_npi/");
+        //dirnamel.push_back("test_matrix_files/sun/");
+        //dirnamel.push_back("test_matrix_files/a1.5/");
+        //dirnamel.push_back("test_matrix_files/a5n/");
+        ftype sclim=(ftype)1.0;
+        std::string header="exp type     mat. size      av. rerr.       med. rerr.       max. rerr.    av. order    av. nb      time\n";
+        if(1) {
+            std::cout<<std::endl;
+            std::cout<<"========= chexp() ========="<<std::endl;
+            std::string methodename="chexp";
+            std::cout<<"using rescaling target value sclim="<<sclim<<std::endl;
+            for(auto dirnit=dirnamel.begin(); dirnit!=dirnamel.end(); ++dirnit) {
+                std::string dirname=*dirnit;
+                std::cout<<"processing file: "<<dirname<<std::endl;
+                std::ostringstream oss;
+                DIR* dir;
+                struct dirent* ent;
+                if((dir=opendir(dirname.c_str()))!=NULL) {
+                    std::map<int,std::string> filelist;
+                    while((ent=readdir(dir))!=NULL) {
+                        if(ent->d_name[0]!='.') {
+                            oss.str("");
+                            oss<<dirname<<ent->d_name;
+                            std::ifstream cfin(oss.str().c_str(),std::ifstream::in|std::ifstream::binary);
+                            int n=0;
+                            int nmat=0;
+                            if(cfin.good()) {
+                                cfin.read(reinterpret_cast<char*>(&(n)),sizeof(int));
+                                cfin.read(reinterpret_cast<char*>(&(nmat)),sizeof(int));
+                                if(n>0) {
+                                    filelist[n]=oss.str();
+                                }
+                            }
+                            cfin.close();
                         }
                     }
-                    cfin.close();
+                    closedir(dir);
+                    printf(header.c_str());
+                    for(auto pair=filelist.begin(); pair!=filelist.end(); ++pair) {
+                        std::ifstream cfin(pair->second.c_str(),std::ifstream::in|std::ifstream::binary);
+                        int n=0;
+                        int nmat=0;
+                        if(cfin.good()) {
+                            cfin.read(reinterpret_cast<char*>(&n),sizeof(int));
+                            cfin.read(reinterpret_cast<char*>(&nmat),sizeof(int));
+                        }
+
+                        if(n<2) {
+                            continue;
+                        }
+
+                        chexp<ctype> mexp(n,sclim);
+                        ctype*** al;
+                        mexp.new_matrix_array(al,nmat);
+                        ctype*** earl;
+                        mexp.new_matrix_array(earl,nmat);
+                        ctype** ea;
+                        mexp.new_matrix(ea);
+                        ctype** dea;
+                        mexp.new_matrix(dea);
+
+                        ftype prec=_fprec*n;
+                        ftype deanorm,eanorm;
+                        ftype avrdeanorm=0.0,maxdeanorm=0.0,meddeanorm=0.0,avniter=0.0,avnb=0.0;
+                        ftype* deanorml=new ftype[nmat];
+
+                        int ic1,ic2,niter,nb;
+                        std::cout<<FIXED_FLOAT(8);
+                        std::complex<double> temp;
+                        for(int imat=0; imat<nmat; ++imat) {
+                            for(ic1=0; ic1<n; ++ic1) {
+                                for(ic2=0; ic2<n; ++ic2) {
+                                    cfin.read(reinterpret_cast<char*>(&(temp)),sizeof(std::complex<double>));
+                                    al[imat][ic1][ic2]=(ctype)temp;
+                                }
+                            }
+                            for(ic1=0; ic1<n; ++ic1) {
+                                for(ic2=0; ic2<n; ++ic2) {
+                                    cfin.read(reinterpret_cast<char*>(&(temp)),sizeof(std::complex<double>));
+                                    earl[imat][ic1][ic2]=(ctype)temp;
+                                }
+                            }
+                            niter=mexp(al[imat],ea,&nb);
+                            mexp.matrix_sub(ea,earl[imat],dea);
+
+                            mexp.get_frobenius_norm(dea,deanorm);
+                            mexp.get_frobenius_norm(earl[imat],eanorm);
+                            avrdeanorm+=deanorm/eanorm;
+                            deanorml[imat]=deanorm/eanorm;
+                            avniter+=(ftype)niter;
+                            avnb+=(ftype)nb;
+                        }
+                        cfin.close();
+
+                        avrdeanorm/=nmat;
+                        avniter/=nmat;
+                        avnb/=nmat;
+                        std::stable_sort(deanorml,deanorml+nmat);
+                        meddeanorm=deanorml[nmat/2];
+                        maxdeanorm=deanorml[nmat-1];
+
+                        int nts=getmcount();
+                        for(int i=0; i<100; ++i) {
+                            for(int imat=0; imat<nmat; ++imat) {
+                                niter=mexp(al[imat],ea,&nb);
+                            }
+                        }
+                        int nte=getmspan(nts);
+                        printf("%-12s    % 3d       %0.5e      %0.5e      %0.5e      %6.3f     % 6.3f    %6.3fs\n",methodename.c_str(),n,avrdeanorm,meddeanorm,maxdeanorm,avniter,avnb,(ftype)nte/1000.0);
+
+                        mexp.delete_matrix_array(al,nmat);
+                        mexp.delete_matrix_array(earl,nmat);
+                        mexp.delete_matrix(ea);
+                        mexp.delete_matrix(dea);
+                        delete[] deanorml;
+                    }
+
                 }
             }
-            closedir(dir);
-            printf("exp type     SU(N)      av. rerr.    av. niter     av. nb     time\n");
-            for(auto pair=filelist.begin(); pair!=filelist.end(); ++pair) {
-                std::ifstream cfin(pair->second.c_str(),std::ifstream::in|std::ifstream::binary);
-                int n=0;
-                int nmat=0;
-                if(cfin.good()) {
-                    cfin.read(reinterpret_cast<char*>(&n),sizeof(int));
-                    cfin.read(reinterpret_cast<char*>(&nmat),sizeof(int));
-                }
-
-                if(n<2) {
-                    continue;
-                }
-
-                chexp<ctype> mexp(n,(ftype)1.0);
-                ctype*** al;
-                mexp.new_matrix_array(al,nmat);
-                ctype*** earl;
-                mexp.new_matrix_array(earl,nmat);
-                ctype** ea;
-                mexp.new_matrix(ea);
-                ctype** dea;
-                mexp.new_matrix(dea);
-
-                ftype prec=_fprec*n;
-                ftype deanorm,eanorm;
-                ftype avrdeanorm=0.0,avniter=0.0,avnb=0.0;
-
-                int ic1,ic2,niter,nb;
-                std::cout<<FIXED_FLOAT(8);
-                std::complex<double> temp;
-                for(int imat=0; imat<nmat; ++imat) {
-                    for(ic1=0; ic1<n; ++ic1) {
-                        for(ic2=0; ic2<n; ++ic2) {
-                            cfin.read(reinterpret_cast<char*>(&(temp)),sizeof(std::complex<double>));
-                            al[imat][ic1][ic2]=(ctype)temp;
-                        }
-                    }
-                    for(ic1=0; ic1<n; ++ic1) {
-                        for(ic2=0; ic2<n; ++ic2) {
-                            cfin.read(reinterpret_cast<char*>(&(temp)),sizeof(std::complex<double>));
-                            earl[imat][ic1][ic2]=(ctype)temp;
-                        }
-                    }
-                    niter=mexp(al[imat],ea,&nb);
-                    mexp.matrix_sub(ea,earl[imat],dea);
-
-                    mexp.get_frobenius_norm(dea,deanorm);
-                    mexp.get_frobenius_norm(ea,eanorm);
-                    avrdeanorm+=deanorm/eanorm;
-                    avniter+=(ftype)niter;
-                    avnb+=(ftype)nb;
-                }
-                cfin.close();
-
-                avrdeanorm/=nmat;
-                avniter/=nmat;
-                avnb/=nmat;
-
-                int nts=getmcount();
-                for(int i=0; i<100; ++i) {
-                    for(int imat=0; imat<nmat; ++imat) {
-                        niter=mexp(al[imat],ea,&nb);
-                    }
-                }
-                int nte=getmspan(nts);
-                printf(" %-10s  % 3d      %0.5e      %3.3f      %3.3f     %3.3fs\n",methodename.c_str(),n,avrdeanorm,avniter,avnb,(ftype)nte/1000.0);
-
-                mexp.delete_matrix_array(al,nmat);
-                mexp.delete_matrix_array(earl,nmat);
-                mexp.delete_matrix(ea);
-                mexp.delete_matrix(dea);
-            }
-
         }
-    }
 
-    if(1) {
-        std::cout<<std::endl;
-        std::cout<<"========= nvexp() ========="<<std::endl;
-        std::string methodename="nvexp";
-        std::string dirname="test_matrix_files/a1.5/";
-        std::ostringstream oss;
-        DIR* dir;
-        struct dirent* ent;
-        if((dir=opendir(dirname.c_str()))!=NULL) {
-            std::map<int,std::string> filelist;
-            while((ent=readdir(dir))!=NULL) {
-                if(ent->d_name[0]!='.') {
-                    oss.str("");
-                    oss<<dirname<<ent->d_name;
-                    std::ifstream cfin(oss.str().c_str(),std::ifstream::in|std::ifstream::binary);
-                    int n=0;
-                    int nmat=0;
-                    if(cfin.good()) {
-                        cfin.read(reinterpret_cast<char*>(&(n)),sizeof(int));
-                        cfin.read(reinterpret_cast<char*>(&(nmat)),sizeof(int));
-                        if(n>0) {
-                            filelist[n]=oss.str();
+        if(1) {
+            std::cout<<std::endl;
+            std::cout<<"========= ochexp() ========="<<std::endl;
+            std::string methodename="ochexp";
+            std::cout<<"using rescaling target value sclim="<<sclim<<std::endl;
+            for(auto dirnit=dirnamel.begin(); dirnit!=dirnamel.end(); ++dirnit) {
+                std::string dirname=*dirnit;
+                std::cout<<"processing file: "<<dirname<<std::endl;
+                std::ostringstream oss;
+                DIR* dir;
+                struct dirent* ent;
+                if((dir=opendir(dirname.c_str()))!=NULL) {
+                    std::map<int,std::string> filelist;
+                    while((ent=readdir(dir))!=NULL) {
+                        if(ent->d_name[0]!='.') {
+                            oss.str("");
+                            oss<<dirname<<ent->d_name;
+                            std::ifstream cfin(oss.str().c_str(),std::ifstream::in|std::ifstream::binary);
+                            int n=0;
+                            int nmat=0;
+                            if(cfin.good()) {
+                                cfin.read(reinterpret_cast<char*>(&(n)),sizeof(int));
+                                cfin.read(reinterpret_cast<char*>(&(nmat)),sizeof(int));
+                                if(n>0) {
+                                    filelist[n]=oss.str();
+                                }
+                            }
+                            cfin.close();
                         }
                     }
-                    cfin.close();
+                    closedir(dir);
+                    printf(header.c_str());
+                    for(auto pair=filelist.begin(); pair!=filelist.end(); ++pair) {
+                        std::ifstream cfin(pair->second.c_str(),std::ifstream::in|std::ifstream::binary);
+                        int n=0;
+                        int nmat=0;
+                        if(cfin.good()) {
+                            cfin.read(reinterpret_cast<char*>(&n),sizeof(int));
+                            cfin.read(reinterpret_cast<char*>(&nmat),sizeof(int));
+                        }
+
+                        if(n<2) {
+                            continue;
+                        }
+
+                        cayley_hamilton<ctype> mexp(n);
+                        ctype*** al;
+                        mexp.new_matrix_array(al,nmat);
+                        ctype*** earl;
+                        mexp.new_matrix_array(earl,nmat);
+                        ctype** ea;
+                        mexp.new_matrix(ea);
+                        ctype** dea;
+                        mexp.new_matrix(dea);
+
+                        ftype prec=_fprec*n;
+                        ftype deanorm,eanorm;
+                        ftype avrdeanorm=0.0,maxdeanorm=0.0,meddeanorm=0.0,avniter=0.0,avnb=0.0;
+                        ftype* deanorml=new ftype[nmat];
+
+                        int ic1,ic2,niter,nb;
+                        std::cout<<FIXED_FLOAT(8);
+                        std::complex<double> temp;
+                        for(int imat=0; imat<nmat; ++imat) {
+                            for(ic1=0; ic1<n; ++ic1) {
+                                for(ic2=0; ic2<n; ++ic2) {
+                                    cfin.read(reinterpret_cast<char*>(&(temp)),sizeof(std::complex<double>));
+                                    al[imat][ic1][ic2]=(ctype)temp;
+                                }
+                            }
+                            for(ic1=0; ic1<n; ++ic1) {
+                                for(ic2=0; ic2<n; ++ic2) {
+                                    cfin.read(reinterpret_cast<char*>(&(temp)),sizeof(std::complex<double>));
+                                    earl[imat][ic1][ic2]=(ctype)temp;
+                                }
+                            }
+                            ftype anorm,sfac=1.0;
+                            mexp.get_frobenius_norm(al[imat],anorm);
+                            nb=0;
+                            while(anorm*sfac>=sclim) {
+                                sfac*=0.5;
+                                ++nb;
+                            }
+                            niter=mexp(al[imat],ea,sfac);
+                            mexp.matrix_sub(ea,earl[imat],dea);
+
+                            mexp.get_frobenius_norm(dea,deanorm);
+                            mexp.get_frobenius_norm(earl[imat],eanorm);
+                            avrdeanorm+=deanorm/eanorm;
+                            deanorml[imat]=deanorm/eanorm;
+                            avniter+=(ftype)niter;
+                            avnb+=(ftype)nb;
+                        }
+                        cfin.close();
+
+                        avrdeanorm/=nmat;
+                        avniter/=nmat;
+                        avnb/=nmat;
+                        std::stable_sort(deanorml,deanorml+nmat);
+                        meddeanorm=deanorml[nmat/2];
+                        maxdeanorm=deanorml[nmat-1];
+
+
+                        int nts=getmcount();
+                        for(int i=0; i<100; ++i) {
+                            for(int imat=0; imat<nmat; ++imat) {
+                                ftype anorm,sfac=1.0;
+                                nb=0;
+                                mexp.get_frobenius_norm(al[imat],anorm);
+                                while(anorm*sfac>=sclim) {
+                                    sfac*=0.5;
+                                    ++nb;
+                                }
+                                niter=mexp(al[imat],ea,sfac);
+                            }
+                        }
+                        int nte=getmspan(nts);
+                        printf("%-12s    % 3d       %0.5e      %0.5e      %0.5e      %6.3f     % 6.3f    %6.3fs\n",methodename.c_str(),n,avrdeanorm,meddeanorm,maxdeanorm,avniter,avnb,(ftype)nte/1000.0);
+
+                        mexp.delete_matrix_array(al,nmat);
+                        mexp.delete_matrix_array(earl,nmat);
+                        mexp.delete_matrix(ea);
+                        mexp.delete_matrix(dea);
+                        delete[] deanorml;
+                    }
+
                 }
             }
-            closedir(dir);
-            printf("exp type     SU(N)      av. rerr.    av. niter     av. nb     time\n");
-            for(auto pair=filelist.begin(); pair!=filelist.end(); ++pair) {
-                std::ifstream cfin(pair->second.c_str(),std::ifstream::in|std::ifstream::binary);
-                int n=0;
-                int nmat=0;
-                if(cfin.good()) {
-                    cfin.read(reinterpret_cast<char*>(&n),sizeof(int));
-                    cfin.read(reinterpret_cast<char*>(&nmat),sizeof(int));
-                }
-
-                if(n<2) {
-                    continue;
-                }
-
-                nvexp<ctype> mexp(n,(ftype)1.0);
-                ctype*** al;
-                mexp.new_matrix_array(al,nmat);
-                ctype*** earl;
-                mexp.new_matrix_array(earl,nmat);
-                ctype** ea;
-                mexp.new_matrix(ea);
-                ctype** dea;
-                mexp.new_matrix(dea);
-
-                ftype prec=_fprec*n;
-                ftype deanorm,eanorm;
-                ftype avrdeanorm=0.0,avniter=0.0,avnb=0.0;
-
-                int ic1,ic2,niter,nb;
-                std::cout<<FIXED_FLOAT(8);
-                std::complex<double> temp;
-                for(int imat=0; imat<nmat; ++imat) {
-                    for(ic1=0; ic1<n; ++ic1) {
-                        for(ic2=0; ic2<n; ++ic2) {
-                            cfin.read(reinterpret_cast<char*>(&(temp)),sizeof(std::complex<double>));
-                            al[imat][ic1][ic2]=(ctype)temp;
-                        }
-                    }
-                    for(ic1=0; ic1<n; ++ic1) {
-                        for(ic2=0; ic2<n; ++ic2) {
-                            cfin.read(reinterpret_cast<char*>(&(temp)),sizeof(std::complex<double>));
-                            earl[imat][ic1][ic2]=(ctype)temp;
-                        }
-                    }
-                    niter=mexp(al[imat],ea,&nb);
-                    mexp.matrix_sub(ea,earl[imat],dea);
-
-                    mexp.get_frobenius_norm(dea,deanorm);
-                    mexp.get_frobenius_norm(ea,eanorm);
-                    avrdeanorm+=deanorm/eanorm;
-                    avniter+=(ftype)niter;
-                    avnb+=(ftype)nb;
-                }
-                cfin.close();
-
-                avrdeanorm/=nmat;
-                avniter/=nmat;
-                avnb/=nmat;
-
-                int nts=getmcount();
-                for(int i=0; i<100; ++i) {
-                    for(int imat=0; imat<nmat; ++imat) {
-                        niter=mexp(al[imat],ea,&nb);
-                    }
-                }
-                int nte=getmspan(nts);
-                printf(" %-10s  % 3d      %0.5e      %3.3f      %3.3f     %3.3fs\n",methodename.c_str(),n,avrdeanorm,avniter,avnb,(ftype)nte/1000.0);
-         
-                mexp.delete_matrix_array(al,nmat);
-                mexp.delete_matrix_array(earl,nmat);
-                mexp.delete_matrix(ea);
-                mexp.delete_matrix(dea);
-            }
-
         }
+
+        if(1) {
+            std::cout<<std::endl;
+            std::cout<<"========= nvexp() ========="<<std::endl;
+            std::string methodename="nvexp";
+            std::cout<<"using rescaling target value sclim="<<sclim<<std::endl;
+            for(auto dirnit=dirnamel.begin(); dirnit!=dirnamel.end(); ++dirnit) {
+                std::string dirname=*dirnit;
+                std::cout<<"processing file: "<<dirname<<std::endl;
+                std::ostringstream oss;
+                DIR* dir;
+                struct dirent* ent;
+                if((dir=opendir(dirname.c_str()))!=NULL) {
+                    std::map<int,std::string> filelist;
+                    while((ent=readdir(dir))!=NULL) {
+                        if(ent->d_name[0]!='.') {
+                            oss.str("");
+                            oss<<dirname<<ent->d_name;
+                            std::ifstream cfin(oss.str().c_str(),std::ifstream::in|std::ifstream::binary);
+                            int n=0;
+                            int nmat=0;
+                            if(cfin.good()) {
+                                cfin.read(reinterpret_cast<char*>(&(n)),sizeof(int));
+                                cfin.read(reinterpret_cast<char*>(&(nmat)),sizeof(int));
+                                if(n>0) {
+                                    filelist[n]=oss.str();
+                                }
+                            }
+                            cfin.close();
+                        }
+                    }
+                    closedir(dir);
+                    printf(header.c_str());
+                    for(auto pair=filelist.begin(); pair!=filelist.end(); ++pair) {
+                        std::ifstream cfin(pair->second.c_str(),std::ifstream::in|std::ifstream::binary);
+                        int n=0;
+                        int nmat=0;
+                        if(cfin.good()) {
+                            cfin.read(reinterpret_cast<char*>(&n),sizeof(int));
+                            cfin.read(reinterpret_cast<char*>(&nmat),sizeof(int));
+                        }
+
+                        if(n<2) {
+                            continue;
+                        }
+
+                        nvexp<ctype> mexp(n,sclim);
+                        ctype*** al;
+                        mexp.new_matrix_array(al,nmat);
+                        ctype*** earl;
+                        mexp.new_matrix_array(earl,nmat);
+                        ctype** ea;
+                        mexp.new_matrix(ea);
+                        ctype** dea;
+                        mexp.new_matrix(dea);
+
+                        ftype prec=_fprec*n;
+                        ftype deanorm,eanorm;
+
+                        ftype avrdeanorm=0.0,maxdeanorm=0.0,meddeanorm=0.0,avniter=0.0,avnb=0.0;
+                        ftype* deanorml=new ftype[nmat];
+
+                        int ic1,ic2,niter,nb;
+                        std::cout<<FIXED_FLOAT(8);
+                        std::complex<double> temp;
+                        for(int imat=0; imat<nmat; ++imat) {
+                            for(ic1=0; ic1<n; ++ic1) {
+                                for(ic2=0; ic2<n; ++ic2) {
+                                    cfin.read(reinterpret_cast<char*>(&(temp)),sizeof(std::complex<double>));
+                                    al[imat][ic1][ic2]=(ctype)temp;
+                                }
+                            }
+                            for(ic1=0; ic1<n; ++ic1) {
+                                for(ic2=0; ic2<n; ++ic2) {
+                                    cfin.read(reinterpret_cast<char*>(&(temp)),sizeof(std::complex<double>));
+                                    earl[imat][ic1][ic2]=(ctype)temp;
+                                }
+                            }
+                            niter=mexp(al[imat],ea,&nb);
+                            mexp.matrix_sub(ea,earl[imat],dea);
+
+                            mexp.get_frobenius_norm(dea,deanorm);
+                            mexp.get_frobenius_norm(ea,eanorm);
+                            avrdeanorm+=deanorm/eanorm;
+                            deanorml[imat]=deanorm/eanorm;
+                            avniter+=(ftype)niter;
+                            avnb+=(ftype)nb;
+                        }
+                        cfin.close();
+
+                        avrdeanorm/=nmat;
+                        avniter/=nmat;
+                        avnb/=nmat;
+                        std::stable_sort(deanorml,deanorml+nmat);
+                        meddeanorm=deanorml[nmat/2];
+                        maxdeanorm=deanorml[nmat-1];
+
+                        int nts=getmcount();
+                        for(int i=0; i<100; ++i) {
+                            for(int imat=0; imat<nmat; ++imat) {
+                                niter=mexp(al[imat],ea,&nb);
+                            }
+                        }
+                        int nte=getmspan(nts);
+                        printf("%-12s    % 3d       %0.5e      %0.5e      %0.5e      %6.3f     % 6.3f    %6.3fs\n",methodename.c_str(),n,avrdeanorm,meddeanorm,maxdeanorm,avniter,avnb,(ftype)nte/1000.0);
+
+                        mexp.delete_matrix_array(al,nmat);
+                        mexp.delete_matrix_array(earl,nmat);
+                        mexp.delete_matrix(ea);
+                        mexp.delete_matrix(dea);
+                        delete[] deanorml;
+                    }
+
+                }
+            }
+        }
+        std::cout<<std::endl<<std::endl;
     }
 
 }

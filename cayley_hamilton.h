@@ -73,7 +73,7 @@ public:
 	using fT=typename type_helper::val_type<T>::type; // underlying floating point type of type T
 	using lT=typename type_helper::long_type<T>::type; // longer bit representation of type T (if defined) or type T itself
 
-	cayley_hamilton(): n(0),pl(0),trpl(0),crpl(0),pal(0),al(0),mmax(0),nhl_max(0),tmat1(0),tmat2(0) {
+	cayley_hamilton(): n(0),pl(0),trpl(0),crpl(0),pal(0),al(0),mmax(0),nhl_max(0),tmat1(0),tmat2(0),kal(0) {
 		//default constructor; will require a call to set_n() to set the size of the square matrices on which the class will operate
 
 		opf=[](fT pref,int i) { return pref/(fT)i; }; // returns the i-th coeff. of the power seris, computed from the (i-1)-th coeff. "pref" and "i"
@@ -98,6 +98,7 @@ public:
 			crpl=new T[n+1]();
 			pal=new T[n]();
 			al=new T[n]();
+			kal=new T[n]();
 			mmax=100*n;
 			nhl_max=3;
 		} else {
@@ -110,6 +111,7 @@ public:
 			crpl=0;
 			pal=0;
 			al=0;
+			kal=0;
 			mmax=100;
 			nhl_max=3;
 		}
@@ -141,6 +143,10 @@ public:
 		if(al!=0) {
 			delete[] al;
 			al=0;
+		}
+		if(kal!=0) {
+			delete[] kal;
+			kal=0;
 		}
 		n=0;
 	}
@@ -178,6 +184,10 @@ public:
 					delete[] al;
 					al=0;
 				}
+				if(kal!=0) {
+					delete[] kal;
+					kal=0;
+				}
 
 				n=tn;
 
@@ -194,6 +204,8 @@ public:
 				pal=new T[n];
 
 				al=new T[n];
+
+				kal=new T[n];
 				
 				mmax=100*n;
 			}
@@ -224,6 +236,10 @@ public:
 				delete[] al;
 				al=0;
 			}
+			if(kal!=0) {
+				delete[] kal;
+				kal=0;
+			}
 			mmax=0;
 
 			n=0;
@@ -243,7 +259,7 @@ public:
 		int niter=0;
 		if(n>0) {
 			int i,j,k;
-			fT sfac=1.0; //scaling factor
+			fT sfac=(fT)1.0; //scaling factor
 			// compute the 0-th to n-th matrix powers of ta[][] :
 			//   the i-th matrix power of ta[][] is stored in pl[i][][]
 			//   the trace of the i-th matrix power of ta[][] is stored in trpl[i]
@@ -255,7 +271,7 @@ public:
 				// (note that since we compute also the matrix powers pl[] from the rescaled matrix,
 				// the Cayley-Hamilton coefficient a_{k,j}, with k=0,1,...,\infty; j=0,...,n-1 
 				// will need to be rescaled only by a factor  sfac^{k}, instead of sfac^{k-j})
-				sfac=1.0/rescale;
+				sfac=(fT)1.0/rescale;
 				matrix_copy_scaled(ain,rescale,pl[1]);
 			} else {
 				matrix_copy(ain,pl[1]);
@@ -284,7 +300,7 @@ public:
 			// for the matrix power series is given by aout[][] = sum_i{al[i]*pl[i][][]} :
 
 			// set initial values for the n entries in al[] and pal[] :
-			fT wpf=1.0,twpf=1.0,ttwpf; //leading coefficient of power series and of running sum used for convergence check
+			fT wpf=1.0,twpf=1.0,wpfr=1.0,ttwpf; //leading coefficient of power series and of running sum used for convergence check
 			for(i=0; i<n; ++i) {
 				pal[i]=0;
 				al[i]=wpf;
@@ -321,18 +337,19 @@ public:
 					wpf*=sfac;
 				}
 
-				ttwpf=twpf;
 				s=std::sqrt(s);
 				if(s>1.0) {
 					// if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
 					wpf*=s;
+					wpfr=1.0;
 					rs=1.0/s;
-					twpf+=wpf;
 				} else {
+					wpfr=s;
 					rs=1.0;
-					twpf+=wpf*s;
 				}
 
+				ttwpf=twpf;
+				twpf+=wpf*wpfr;
 				if(ttwpf==twpf) {
 					++nhl;
 					if(nhl>=nhl_max) {
@@ -366,7 +383,7 @@ public:
 			T** kh=pl[n];
 
 			int i,j,k;
-			fT sfac=1.0; //scaling factor
+			fT sfac=(fT)1.0; //scaling factor
 			// compute the 0-th to n-th matrix powers of ta[][] :
 			//   the i-th matrix power of ta[][] is stored in pl[i][][]
 			//   the trace of the i-th matrix power of ta[][] is stored in trpl[i]
@@ -377,7 +394,7 @@ public:
 				// (note that since we compute also the matrix powers pl[] from the rescaled matrix,
 				// the Cayley-Hamilton coefficient a_{k,j}, with k=0,1,...,\infty; j=0,...,n-1 
 				// will need to be rescaled only by a factor  sfac^{k}, instead of sfac^{k-j})
-				sfac=1.0/rescale;
+				sfac=(fT)1.0/rescale;
 				matrix_copy_scaled(ain,rescale,pl[1]);
 			} else {
 				matrix_copy(ain,pl[1]);
@@ -406,7 +423,7 @@ public:
 			// for the matrix power series is given by aout[][] = sum_i{al[i]*pl[i][][]} :
 
 			// set initial values for the n entries in al[] and pal[] and the nxn entries in kmats[][] :
-			fT wpf=1.0,twpf=1.0,ttwpf; //leading coefficient of power series and of running sum used for convergence check
+			fT wpf=1.0,twpf=1.0,wpfr=1.0,ttwpf; //leading coefficient of power series and of running sum used for convergence check
 			set_to_zero(kmats);
 			for(i=0; i<n; ++i) {
 				pal[i]=0;
@@ -452,16 +469,15 @@ public:
 
 				wpf=opf(wpf,j+1); //compute (i+1)-th power series coefficent from i-th coefficient, using the rule defined by opf()
 
-				ttwpf=twpf;
 				s=std::sqrt(s);
 				if(s>1.0) {
 					// if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
 					wpf*=s;
+					wpfr=1.0;
 					rs=1.0/s;
-					twpf+=wpf*sfac;
 				} else {
+					wpfr=s;
 					rs=1.0;
-					twpf+=wpf*s*sfac;
 				}
 
 				// add terms to kmats[][]:
@@ -484,6 +500,8 @@ public:
 					wpf*=sfac;
 				}
 
+				ttwpf=twpf;
+				twpf+=wpf*wpfr;
 				if(ttwpf==twpf) {
 					++nhl;
 					if(nhl>=nhl_max) {
@@ -587,7 +605,7 @@ public:
 			// for the matrix power series is given by aout[][] = sum_i{al[i]*pl[i][][]} :
 
 			// set initial values for the n entries in al[] and pal[] and the nxn entries in kmats[][] :
-			fT wpf=1.0,twpf=1.0,ttwpf; //leading coefficient of power series and of running sum used for convergence check
+			fT wpf=1.0,twpf=1.0,wpfr=1.0,ttwpf; //leading coefficient of power series and of running sum used for convergence check
 			set_to_zero(kmats);
 			for(i=0; i<n; ++i) {
 				pal[i]=0;
@@ -633,16 +651,15 @@ public:
 
 				wpf=opf(wpf,j+1); //compute (i+1)-th power series coefficent from i-th coefficient, using the rule defined by opf()
 
-				ttwpf=twpf;
 				s=std::sqrt(s);
 				if(s>1.0) {
 					// if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
 					wpf*=s;
+					wpfr=1.0;
 					rs=1.0/s;
-					twpf+=wpf*sfac;
 				} else {
+					wpfr=s;
 					rs=1.0;
-					twpf+=wpf*s*sfac;
 				}
 
 				// add terms to kmats[][]:
@@ -665,6 +682,8 @@ public:
 					wpf*=sfac;
 				}
 
+				ttwpf=twpf;
+				twpf+=wpf*wpfr;
 				if(ttwpf==twpf) {
 					++nhl;
 					if(nhl>=nhl_max) {
@@ -786,7 +805,7 @@ public:
 			// for the matrix power series would be given by aout[][] = sum_i{al[i]*pl[i][][]} :
 
 			// set initial values for the n entries in al[] and pal[] and the nxn entries in kmats[][] :
-			fT wpf=1.0,twpf=1.0,ttwpf; //leading coefficient of power series and of running sum used for convergence check
+			fT wpf=1.0,twpf=1.0,wpfr=1.0,ttwpf; //leading coefficient of power series and of running sum used for convergence check
 			set_to_zero(kmats);
 			for(i=0; i<n; ++i) {
 				pal[i]=0;
@@ -832,16 +851,15 @@ public:
 
 				wpf=opf(wpf,j+1); //compute (i+1)-th power series coefficent from i-th coefficient, using the rule defined by opf()
 
-				ttwpf=twpf;
 				s=std::sqrt(s);
 				if(s>1.0) {
 					// if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
 					wpf*=s;
+					wpfr=1.0;
 					rs=1.0/s;
-					twpf+=wpf*sfac;
 				} else {
+					wpfr=s;
 					rs=1.0;
-					twpf+=wpf*s*sfac;
 				}
 
 				// add terms to kmats[][]:
@@ -864,6 +882,8 @@ public:
 					wpf*=sfac;
 				}
 
+				ttwpf=twpf;
+				twpf+=wpf*wpfr;
 				if(ttwpf==twpf) {
 					++nhl;
 					if(nhl>=nhl_max) {
@@ -890,7 +910,7 @@ public:
 			T** kh=pl[n];
 
 			int i,j,k;
-			fT sfac=1.0; //scaling factor
+			fT sfac=(fT)1.0; //scaling factor
 			// compute the 0-th to n-th matrix powers of ta[][] :
 			//   the i-th matrix power of ta[][] is stored in pl[i][][]
 			//   the trace of the i-th matrix power of ta[][] is stored in trpl[i]
@@ -901,7 +921,7 @@ public:
 				// (note that since we compute also the matrix powers pl[] from the rescaled matrix,
 				// the Cayley-Hamilton coefficient a_{k,j}, with k=0,1,...,\infty; j=0,...,n-1 
 				// will need to be rescaled only by a factor  sfac^{k}, instead of sfac^{k-j})
-				sfac=1.0/rescale;
+				sfac=(fT)1.0/rescale;
 				matrix_copy_scaled(ain,rescale,pl[1]);
 			} else {
 				matrix_copy(ain,pl[1]);
@@ -930,7 +950,7 @@ public:
 			// for the matrix power series is given by aout[][] = sum_i{al[i]*pl[i][][]} :
 
 			// set initial values for the n entries in al[] and pal[] and the nxn entries in kmats[][] :
-			fT wpf=1.0,twpf=1.0,ttwpf; //leading coefficient of power series and of running sum used for convergence check
+			fT wpf=1.0,twpf=1.0,wpfr=1.0,ttwpf; //leading coefficient of power series and of running sum used for convergence check
 			set_to_zero(kmats);
 			for(i=0; i<n; ++i) {
 				pal[i]=0;
@@ -976,16 +996,15 @@ public:
 
 				wpf=opf(wpf,j+1); //compute (i+1)-th power series coefficent from i-th coefficient, using the rule defined by opf()
 
-				ttwpf=twpf;
 				s=std::sqrt(s);
 				if(s>1.0) {
 					// if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
 					wpf*=s;
+					wpfr=1.0;
 					rs=1.0/s;
-					twpf+=wpf*sfac;
 				} else {
+					wpfr=s;
 					rs=1.0;
-					twpf+=wpf*s*sfac;
 				}
 
 				// add terms to kmats[][]:
@@ -1008,6 +1027,8 @@ public:
 					wpf*=sfac;
 				}
 
+				ttwpf=twpf;
+				twpf+=wpf*wpfr;
 				if(ttwpf==twpf) {
 					++nhl;
 					if(nhl>=nhl_max) {
@@ -1051,6 +1072,29 @@ public:
 				}
 			}
 
+		}
+	}
+
+	void ch_mult(T* tcrpl, T* ain1, T* ain2, T* aout) {
+		// given the characteristic polynomial coefficients tcrpl[] for some matrix U, this routine
+		// computes the Cayley-Hamilton decomposition coefficients of fout(U)=fin1(U).fin2(U) where
+		// fin1(U) and fin2(U) are given by their Cayley-Hamilton decompositions ain1[] and ain2[]. 
+		// the Cayley-Hamilton coefficients of fout(U) are written to aout[].
+		int i,j;
+		T cho=ain1[0];
+		for(i=0; i<n; ++i) {
+			kal[i]=ain1[i];
+			pal[i]=ain2[i];
+			aout[i]=cho*pal[i];
+		}
+		for(j=1; j<n; ++j) {
+			cho=pal[n-1];
+			for(i=n-1; i>0; --i) {
+				pal[i]=pal[i-1]-cho*tcrpl[i];
+				aout[i]+=kal[j]*pal[i];
+			}
+			pal[0]=-cho*tcrpl[0];
+			aout[0]+=kal[j]*pal[0];
 		}
 	}
 
@@ -1922,6 +1966,7 @@ protected:
 	T* al;
 	T** tmat1;
 	T** tmat2;
+	T* kal;
 private:
 	fT(*opf)(fT,int);
 };
@@ -1942,6 +1987,7 @@ public:
 	using cayley_hamilton<T>::tmat1;
 	using cayley_hamilton<T>::tmat2;
 	using cayley_hamilton<T>::set_n;
+	using cayley_hamilton<T>::ch_mult;
 	using cayley_hamilton<T>::set_to_zero;
 	using cayley_hamilton<T>::set_to_identity;
 	using cayley_hamilton<T>::set_to_identity_scaled;
@@ -2035,7 +2081,7 @@ public:
 			// for the matrix power series is given by aout[][] = sum_i{al[i]*pl[i][][]} :
 
 			// set initial values for the n entries in al[] and pal[] :
-			fT wpf=1.0,twpf=1.0,ttwpf; //leading coefficient of power series and of running sum used for convergence check
+			fT wpf=1.0,twpf=1.0,wpfr=1.0,ttwpf; //leading coefficient of power series and of running sum used for convergence check
 			for(i=0; i<n; ++i) {
 				pal[i]=0;
 				al[i]=wpf;
@@ -2063,18 +2109,19 @@ public:
 
 				wpf/=(fT)(j+1); //compute (j+1)-th power series coefficent from j-th coefficient
 
-				ttwpf=twpf;
 				s=std::sqrt(s);
 				if(s>1.0) {
 					// if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
 					wpf*=s;
+					wpfr=1.0;
 					rs=1.0/s;
-					twpf+=wpf;
 				} else {
+					wpfr=s;
 					rs=1.0;
-					twpf+=wpf*s;
 				}
 
+				ttwpf=twpf;
+				twpf+=wpf*wpfr;
 				if(ttwpf==twpf) {
 					++nhl;
 					if(nhl>=nhl_max) {
@@ -2089,22 +2136,8 @@ public:
 			niter=j;
 
 			// take nb times the square of the result:
-			T* kal=trpl;
 			for(k=0; k<nb; ++k) {
-				cho=al[0];
-				for(i=0; i<n; ++i) {
-					kal[i]=pal[i]=al[i];
-					al[i]*=cho;
-				}
-				for(j=1; j<n; ++j) {
-					cho=pal[n-1];
-					for(i=n-1; i>0; --i) {
-						pal[i]=pal[i-1]-cho*crpl[i];
-						al[i]+=kal[j]*pal[i];
-					}
-					pal[0]=-cho*crpl[0];
-					al[0]+=kal[j]*pal[0];
-				}
+				ch_mult(crpl,al,al,al);
 			}
 
 
@@ -2168,7 +2201,7 @@ public:
 			// for the matrix power series is given by aout[][] = sum_i{al[i]*pl[i][][]} :
 
 			// set initial values for the n entries in al[] and pal[] and the nxn entries in kmats[][] :
-			fT wpf=1.0,twpf=1.0,ttwpf; //leading coefficient of power series and of running sum used for convergence check
+			fT wpf=1.0,twpf=1.0,wpfr=1.0,ttwpf; //leading coefficient of power series and of running sum used for convergence check
 			set_to_zero(kmats);
 			for(i=0; i<n; ++i) {
 				pal[i]=0;
@@ -2209,16 +2242,15 @@ public:
 
 				wpf/=(fT)(j+1); //compute (j+1)-th power series coefficent from j-th coefficient
 
-				ttwpf=twpf;
 				s=std::sqrt(s);
 				if(s>1.0) {
 					// if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
 					wpf*=s;
+					wpfr=1.0;
 					rs=1.0/s;
-					twpf+=wpf;
 				} else {
+					wpfr=s;
 					rs=1.0;
-					twpf+=wpf*s;
 				}
 
 				// add terms to kmats[][]:
@@ -2236,6 +2268,8 @@ public:
 					kmats[i][i]+=wpf*kh[i][i];
 				}
 
+				ttwpf=twpf;
+				twpf+=wpf*wpfr;
 				if(ttwpf==twpf) {
 					++nhl;
 					if(nhl>=nhl_max) {
@@ -2249,7 +2283,7 @@ public:
 			}
 			niter=j;
 
-			// take nb times the square of the result matrix:
+			// take nb times the square:
 			T* kal=trpl;
 			for(k=0; k<nb; ++k) {
 				cho=al[0];
@@ -2370,7 +2404,7 @@ public:
 			// for the matrix exponential is given by aout[][] = sum_i{al[i]*pl[i][][]} :
 
 			// set initial values for the n entries in al[] and pal[] and the nxn entries in kmats[][] :
-			fT wpf=1.0,twpf=1.0,ttwpf; //leading coefficient of power series and of running sum used for convergence check
+			fT wpf=1.0,twpf=1.0,wpfr=1.0,ttwpf; //leading coefficient of power series and of running sum used for convergence check
 			set_to_zero(kmats);
 			for(i=0; i<n; ++i) {
 				pal[i]=0;
@@ -2412,16 +2446,15 @@ public:
 
 				wpf/=(fT)(j+1); //compute (j+1)-th power series coefficent from j-th coefficient
 
-				ttwpf=twpf;
 				s=std::sqrt(s);
 				if(s>1.0) {
 					// if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
 					wpf*=s;
+					wpfr=1.0;
 					rs=1.0/s;
-					twpf+=wpf;
 				} else {
+					wpfr=s;
 					rs=1.0;
-					twpf+=wpf*s;
 				}
 
 				// add terms to kmats[][]:
@@ -2439,6 +2472,8 @@ public:
 					kmats[i][i]+=wpf*kh[i][i];
 				}
 
+				ttwpf=twpf;
+				twpf+=wpf*wpfr;
 				if(ttwpf==twpf) {
 					++nhl;
 					if(nhl>=nhl_max) {
@@ -2452,7 +2487,7 @@ public:
 			}
 			niter=j;
 
-			// take nb times the square of the result matrix:
+			// compute coefficients for nb-times squared matrix function and corresponding differentials:
 			T* kal=trpl;
 			for(k=0; k<nb; ++k) {
 				cho=al[0];
@@ -2461,8 +2496,7 @@ public:
 					kh[i][i]=(fT)0.5*kmats[i][i];
 					kmats[i][i]=(fT)2.0*kh[0][i]*al[i];
 					for(j=i+1; j<n; ++j) {
-						kh[i][j]=(fT)0.5*kmats[i][j];
-						kh[j][i]=(fT)0.5*kmats[i][j];
+						kh[j][i]=kh[i][j]=(fT)0.5*kmats[i][j]; // define symmetric kh[][] to avoid case-distinctions in computations below
 						kmats[i][j]=kh[0][i]*al[j]+kh[0][j]*al[i];
 					}
 					al[i]*=cho;
@@ -2592,7 +2626,7 @@ public:
 			// for the matrix exponential would be given by aout[][] = sum_i{al[i]*pl[i][][]} :
 
 			// set initial values for the n entries in al[] and pal[] and the nxn entries in kmats[][] :
-			fT wpf=1.0,twpf=1.0,ttwpf; //leading coefficient of power series and of running sum used for convergence check
+			fT wpf=1.0,twpf=1.0,wpfr=1.0,ttwpf; //leading coefficient of power series and of running sum used for convergence check
 			set_to_zero(kmats);
 			for(i=0; i<n; ++i) {
 				pal[i]=0;
@@ -2634,16 +2668,15 @@ public:
 
 				wpf/=(fT)(j+1); //compute (j+1)-th power series coefficent from j-th coefficient
 
-				ttwpf=twpf;
 				s=std::sqrt(s);
 				if(s>1.0) {
 					// if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
 					wpf*=s;
+					wpfr=1.0;
 					rs=1.0/s;
-					twpf+=wpf;
 				} else {
+					wpfr=s;
 					rs=1.0;
-					twpf+=wpf*s;
 				}
 
 				// add terms to kmats[][]:
@@ -2661,6 +2694,8 @@ public:
 					kmats[i][i]+=wpf*kh[i][i];
 				}
 
+				ttwpf=twpf;
+				twpf+=wpf*wpfr;
 				if(ttwpf==twpf) {
 					++nhl;
 					if(nhl>=nhl_max) {
@@ -2781,7 +2816,7 @@ public:
 			// for the matrix exponential would be given by aout[][] = sum_i{al[i]*pl[i][][]} :
 
 			// set initial values for the n entries in al[] and pal[] and the nxn entries in kmats[][] :
-			fT wpf=1.0,twpf=1.0,ttwpf; //leading coefficient of power series and of running sum used for convergence check
+			fT wpf=1.0,twpf=1.0,wpfr=1.0,ttwpf; //leading coefficient of power series and of running sum used for convergence check
 			set_to_zero(kmats);
 			for(i=0; i<n; ++i) {
 				pal[i]=0;
@@ -2823,16 +2858,15 @@ public:
 
 				wpf/=(fT)(j+1); //compute (j+1)-th power series coefficent from j-th coefficient
 
-				ttwpf=twpf;
 				s=std::sqrt(s);
 				if(s>1.0) {
 					// if s is bigger than 1, normalize pal[] by a factor rs=1.0/s in next itaration, and multiply wpf by s to compensate
 					wpf*=s;
+					wpfr=1.0;
 					rs=1.0/s;
-					twpf+=wpf;
 				} else {
+					wpfr=s;
 					rs=1.0;
-					twpf+=wpf*s;
 				}
 
 				// add terms to kmats[][]:
@@ -2850,6 +2884,8 @@ public:
 					kmats[i][i]+=wpf*kh[i][i];
 				}
 
+				ttwpf=twpf;
+				twpf+=wpf*wpfr;
 				if(ttwpf==twpf) {
 					++nhl;
 					if(nhl>=nhl_max) {
@@ -2960,6 +2996,7 @@ public:
 	using cayley_hamilton<T>::tmat1;
 	using cayley_hamilton<T>::tmat2;
 	using cayley_hamilton<T>::set_n;
+	using cayley_hamilton<T>::ch_mult;
 	using cayley_hamilton<T>::set_to_zero;
 	using cayley_hamilton<T>::set_to_identity;
 	using cayley_hamilton<T>::set_to_identity_scaled;

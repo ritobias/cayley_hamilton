@@ -158,9 +158,9 @@ public:
 		for(i=0; i<n-1; ++i) {
 			sparse_mat<ctype>& tgen=generator[igen];
 			for(j=0; j<=i; ++j) {
-				tgen.push(j,j,std::sqrt(2.0/((ftype)(i+1)*(i+2))));
+				tgen.push(j,j,std::sqrt((ftype)2.0/((ftype)(i+1)*(i+2))));
 			}
-			tgen.push(i+1,i+1,-std::sqrt(2.0*(ftype)(i+1)/(ftype)(i+2)));
+			tgen.push(i+1,i+1,-std::sqrt((ftype)2.0*(ftype)(i+1)/(ftype)(i+2)));
 			++igen;
 		}
 
@@ -359,7 +359,7 @@ public:
 		ftype tiv;
 		ctype ttiv;
 		int maxit=5*n; //limit the maximum number of iterations
-		ftype tfprec=10.0*_fprec*(ftype)n*n; //iteration will stop as soon as the 1-norm of the change done to outvec[]
+		ftype tfprec=(ftype)10.0*_fprec*(ftype)n*n; //iteration will stop as soon as the 1-norm of the change done to outvec[]
 											 //during the last iteration is smaller than tfprec times the 1-norm of outvec[] itself
 		
 		ch.matrix_copy(inmat,tmat); //start by setting tmat[][]=inmat[][]
