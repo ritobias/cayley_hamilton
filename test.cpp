@@ -1042,13 +1042,10 @@ int main()
     if(1) {
         std::deque<std::string> dirnamel;
         dirnamel.push_back("test_matrix_files/sun_r0_1pi/");
-        dirnamel.push_back("test_matrix_files/sun_r0_2pi/");
+        //dirnamel.push_back("test_matrix_files/sun_r0_2pi/");
         dirnamel.push_back("test_matrix_files/sun_r0_5pi/");
-        dirnamel.push_back("test_matrix_files/sun_r0_10pi/");
+        //dirnamel.push_back("test_matrix_files/sun_r0_10pi/");
         dirnamel.push_back("test_matrix_files/sun_r0_npi/");
-        //dirnamel.push_back("test_matrix_files/sun/");
-        //dirnamel.push_back("test_matrix_files/a1.5/");
-        //dirnamel.push_back("test_matrix_files/a5n/");
         ftype sclim=(ftype)1.0;
         std::string header="exp type     mat. size      av. rerr.       med. rerr.       max. rerr.    av. order    av. nb      time\n";
         if(1) {

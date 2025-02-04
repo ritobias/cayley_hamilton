@@ -9,7 +9,9 @@
 *.user
 *.userosscache
 *.sln.docstates
-*test_matrix_files
+*su20_*
+*sun_r0_10pi
+*sun_r0_2pi
 *external
 
 # User-specific files (MonoDevelop/Xamarin Studio)
