@@ -54,6 +54,7 @@ int main()
     std::mt19937_64 rng(seedsq);
     rng.discard(10000-1);
     std::uniform_real_distribution<> dis(0,1.0);
+    std::normal_distribution<> ndis{1.0,1.0};
 
     std::cout<<"_fprec="<<_fprec<<std::endl;
 
@@ -71,12 +72,12 @@ int main()
         sun.ch.new_matrix(ea);
 
         // specify a random vector "v" of magnitude 2*alpha in space spanned by Lie algebra basis
-        //ftype alpha=0.5; //value for which "v" points to point within injectivty domain of exponential map exp_{id} : su(n)=T_{id}SU(n) -> SU(n))
-        ftype alpha=5.0; //value for which "v" points to point outside of injectivity domain of exponetial map exp_{id} : su(n)=T_{id}SU(n) -> SU(n))
+        ftype alpha=0.5; //value for which "v" points to point within injectivty domain of exponential map exp_{id} : su(n)=T_{id}SU(n) -> SU(n))
+        //ftype alpha=5.0; //value for which "v" points to point outside of injectivity domain of exponetial map exp_{id} : su(n)=T_{id}SU(n) -> SU(n))
         ftype* v=new ftype[sun.ngen];
         ftype vnorm=0;
         for(int i=0; i<sun.ngen; ++i) {
-            v[i]=(ftype)(1.0-2.0*dis(rng));
+            v[i]=(ftype)ndis(rng);
             vnorm+=v[i]*v[i];
         }
         vnorm=std::sqrt(vnorm);
