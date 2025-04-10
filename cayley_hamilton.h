@@ -1973,6 +1973,8 @@ private:
 
 template<class T>
 class chexp : public cayley_hamilton<T> {
+// template class providing an implementation of matrix exponentiation using iterative Cayley-Hamilton method 
+// with scaling and squaring. (cf. arXiv:2404.07704).
 public:
 	using fT=typename cayley_hamilton<T>::fT; // underlying floating point type of type T
 	using lT=typename cayley_hamilton<T>::lT; // longer bit representation of type T (if defined) or type T itself
@@ -2033,7 +2035,7 @@ public:
 	}
 
 	int operator()(T** ain,T** aout,int* onb=0) {
-		// computes the matrix exponential of ain[][], using the Cayley-Hamilton recursion in combination with "scale and square", 
+		// computes the matrix exponential of ain[][], using the Cayley-Hamilton recursion in combination with "scaling and squaring", 
 		// and writes the result to aout[][]
 		int niter=0;
 		int nb=0;
@@ -2152,7 +2154,7 @@ public:
 	}
 
 	int operator()(T** ain,T** aout,T** daout) {
-		// computes the matrix exponential of ain[][], using the Cayley-Hamilton recursion in combination with "scale and square", 
+		// computes the matrix exponential of ain[][], using the Cayley-Hamilton recursion in combination with "scaling and squaring", 
 		// and writes the result to aout[][]; computes also the derivative of aout[][] in the direction of
 		// daout[][] and overwrite daout[][] with the result :
 		int niter=0;
@@ -2353,7 +2355,7 @@ public:
 	}
 
 	int operator()(T** ain,T** aout,T**** daout) {
-		// computes the matrix exponential of ain[][], using the Cayley-Hamilton recursion in combination with "scale and square", 
+		// computes the matrix exponential of ain[][], using the Cayley-Hamilton recursion in combination with "scaling and squaring", 
 		// and writes the result to aout[][]; computes also the derivative of aout[][] with respect to each of 
 		// the nxn components of ain[][] and write the result to daout[][][][] (the first two indices define the component
 		// with respect to which the derivative is taken and the last two indices enumerate the components of the matrix-
@@ -2576,7 +2578,7 @@ public:
 	}
 
 	int get_r_k(T** ain,T* rout,T** kout) {
-		// computes the matrix exponential of ain[][], using the Cayley-Hamilton recursion in combination with "scale and square", 
+		// computes the matrix exponential of ain[][], using the Cayley-Hamilton recursion in combination with "scaling and squaring", 
 		// and writes the Cayley-Hamilton coefficients to rout[]; computes also the decomposition matrix of the derivative
 		// of rout[] with respect to the components of ain[][] and writes the result to kout[][] :
 		int niter=0;
@@ -2766,7 +2768,7 @@ public:
 	}
 
 	int get_r_dr(T** ain,T* rout,T*** drout) {
-		// computes the matrix exponential of ain[][], using the Cayley-Hamilton recursion in combination with "scale and square", 
+		// computes the matrix exponential of ain[][], using the Cayley-Hamilton recursion in combination with "scaling and squaring", 
 		// and writes the Cayley-Hamilton coefficients to rout[]; computes also the derivatives of rout[]
 		// with respect to the components of ain[][] and writes the resulting matrices to drout[][][] :
 		int niter=0;
@@ -2982,6 +2984,8 @@ public:
 
 template<class T>
 class nvexp: public cayley_hamilton<T> {
+// template class providing an implementation of matrix exponentiation using naive Taylor series method
+// with scaling and squaring (cf. arXiv:2404.07704).
 public:
 	using fT=typename cayley_hamilton<T>::fT; // underlying floating point type of type T
 	using lT=typename cayley_hamilton<T>::lT; // longer bit representation of type T (if defined) or type T itself
@@ -3042,7 +3046,7 @@ public:
 	}
 
 	int operator()(T** ain,T** aout,int* onb=0) {
-		// computes the matrix exponential of ain[][], using the Cayley-Hamilton recursion in combination with "scale and square", 
+		// computes the matrix exponential of ain[][], using naive Taylor series method with "scaling and squaring", 
 		// and writes the result to aout[][]
 		int niter=0;
 		int nb=0;
