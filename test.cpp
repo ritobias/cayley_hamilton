@@ -1047,18 +1047,18 @@ int main()
         //dirnamel.push_back("test_matrix_files/sun_r0_5pi/");
         //dirnamel.push_back("test_matrix_files/sun_r0_10pi/");
         //dirnamel.push_back("test_matrix_files/sun_r0_npi/");
-        dirnamel.push_back("test_matrix_files/sun_r0p1pi/");
-        dirnamel.push_back("test_matrix_files/sun_r0p2pi/");
-        dirnamel.push_back("test_matrix_files/sun_r0p5pi/");
+        //dirnamel.push_back("test_matrix_files/sun_r0p1pi/");
+        //dirnamel.push_back("test_matrix_files/sun_r0p2pi/");
+        //dirnamel.push_back("test_matrix_files/sun_r0p5pi/");
         dirnamel.push_back("test_matrix_files/sun_r1pi/");
-        dirnamel.push_back("test_matrix_files/sun_r1p5pi/");
-        dirnamel.push_back("test_matrix_files/sun_r2pi/");
-        dirnamel.push_back("test_matrix_files/sun_r2p5pi/");
+        //dirnamel.push_back("test_matrix_files/sun_r1p5pi/");
+        //dirnamel.push_back("test_matrix_files/sun_r2pi/");
+        //dirnamel.push_back("test_matrix_files/sun_r2p5pi/");
         dirnamel.push_back("test_matrix_files/sun_r3pi/");
-        dirnamel.push_back("test_matrix_files/sun_r3p5pi/");
+        //dirnamel.push_back("test_matrix_files/sun_r3p5pi/");
         dirnamel.push_back("test_matrix_files/sun_r4pi/");
-        dirnamel.push_back("test_matrix_files/sun_r4p5pi/");
-        dirnamel.push_back("test_matrix_files/sun_r5pi/");
+        //dirnamel.push_back("test_matrix_files/sun_r4p5pi/");
+        //dirnamel.push_back("test_matrix_files/sun_r5pi/");
         ftype sclim=(ftype)1.0;
         std::string header="exp type     mat. size      av. rerr.       med. rerr.       max. rerr.    av. order    av. nb      time\n";
         if(1) {
