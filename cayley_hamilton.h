@@ -266,8 +266,8 @@ public:
 
 			trpl[0]=n;
 			if(rescale!=0) {
-				// if matrix rescaling is used, set sfac to be the magnitude of the largest element of ain[][]
-				// and initiate the computation of the matrix powers from ain[][]/sfac instead of ain[][]:
+				// if matrix rescaling is used, set sfac=1.0/rescale and initiate
+				// the computation of the matrix powers from ain[][]*rescale instead of ain[][]:
 				// (note that since we compute also the matrix powers pl[] from the rescaled matrix,
 				// the Cayley-Hamilton coefficient a_{k,j}, with k=0,1,...,\infty; j=0,...,n-1 
 				// will need to be rescaled only by a factor  sfac^{k}, instead of sfac^{k-j})
